@@ -1,185 +1,668 @@
-#article-container
-  .shuoshuo-item
-    @extend .cardHover
-    margin-bottom: 20px
-    padding: 35px 30px 30px
+#body-wrap.type-shuoshuo
+  .layout
+    max-width: 700px !important
+    width: 100% !important
+    margin: 20px auto 40px !important
+    padding: 0 16px !important
+
+    > #page
+      width: 100% !important
+      padding: 0 !important
+      background: transparent !important
+      border: none !important
+      box-shadow: none !important
+
+    > #page.nc
+      background: transparent !important
+      box-shadow: none !important
+
+  #aside-content
+    display: none !important
+
+  .page-title
+    display: none !important
+
+  #page-header.nav-fixed #nav,
+  #page-header.not-top-img #nav
+    background: rgba(255, 255, 255, .86)
+    border-bottom: 1px solid rgba(0, 0, 0, .05)
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .04)
+    backdrop-filter: blur(16px)
+    -webkit-backdrop-filter: blur(16px)
+
+/* 朋友圈主体外壳 */
+.shuoshuo-moments-wrap
+  overflow: hidden
+  border: 1px solid rgba(0, 0, 0, .06)
+  border-radius: 16px
+  background: var(--card-bg, #fff)
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .05)
+
+/* 朋友圈顶部封面 */
+.moments-header
+  .moments-cover
+    position: relative
+    width: 100%
+    height: 240px
+    background-size: cover
+    background-position: center
 
     +maxWidth768()
-      padding: 25px 20px 20px
+      height: 180px
 
-  .shuoshuo-item-header
+  .moments-cover-mask
+    position: absolute
+    top: 0
+    right: 0
+    bottom: 0
+    left: 0
+    background: linear-gradient(to bottom, rgba(0, 0, 0, .1) 0%, rgba(0, 0, 0, .45) 100%)
+
+  .moments-user-row
+    position: absolute
+    right: 20px
+    bottom: -32px
+    z-index: 2
     display: flex
-    align-items: center
-    cursor: default
+    align-items: flex-end
+    gap: 14px
 
-  .shuoshuo-avatar
+  .moments-username
+    margin-bottom: 38px
+    color: #fff
+    font-weight: 700
+    font-size: 1.18rem
+    text-shadow: 0 2px 6px rgba(0, 0, 0, .7)
+    letter-spacing: .5px
+
+  .moments-avatar-box
+    width: 78px
+    height: 78px
     overflow: hidden
-    width: 40px
-    height: 40px
-    border-radius: 40px
+    border: 3px solid var(--card-bg, #fff)
+    border-radius: 10px
+    background: var(--card-bg, #fff)
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .18)
+
+    +maxWidth768()
+      width: 66px
+      height: 66px
 
     img
-      margin: 0
-      width: 100%
-      height: 100%
+      display: block !important
+      width: 100% !important
+      height: 100% !important
+      max-width: 100% !important
+      margin: 0 !important
+      border-radius: 0 !important
+      object-fit: cover !important
 
-  .shuoshuo-info
-    margin-left: 10px
-    line-height: 1.5
+  .moments-signature
+    padding: 38px 24px 16px
+    border-bottom: 1px solid rgba(0, 0, 0, .06)
+    color: #8e8e93
+    text-align: right
+    font-size: .86rem
 
-  .shuoshuo-date
-    color: #858585
-    font-size: .8em
+    +maxWidth768()
+      padding: 36px 16px 14px
 
-  .shuoshuo-content
-    padding: 15px 0 10px
+/* 说说列表 */
+#article-container
+  padding: 0 !important
+  margin: 0 !important
+
+  .moments-list
+    width: 100%
+
+  .moments-item
+    display: flex
+    gap: 14px
+    padding: 20px 24px
+    border-bottom: 1px solid rgba(0, 0, 0, .06)
+    transition: background .2s ease
+
+    &:last-child
+      border-bottom: none
+
+    +maxWidth768()
+      gap: 10px
+      padding: 16px 14px
+
+  .moments-item-avatar
+    width: 44px !important
+    height: 44px !important
+    min-width: 44px !important
+    max-width: 44px !important
+    overflow: hidden
+    flex-shrink: 0
+    border-radius: 6px
+
+    +maxWidth768()
+      width: 38px !important
+      height: 38px !important
+      min-width: 38px !important
+      max-width: 38px !important
+
+    img
+      display: block !important
+      width: 44px !important
+      height: 44px !important
+      max-width: 44px !important
+      max-height: 44px !important
+      margin: 0 !important
+      border-radius: 0 !important
+      object-fit: cover !important
+
+      +maxWidth768()
+        width: 38px !important
+        height: 38px !important
+        max-width: 38px !important
+        max-height: 38px !important
+
+  .moments-item-main
+    min-width: 0
+    flex: 1
+
+  .moments-item-author
+    margin-bottom: 4px
+    color: #576b95
+    font-weight: 600
+    font-size: 1rem
+    line-height: 1.3
+
+  .moments-text
+    margin-bottom: 8px
+    color: var(--font-color, #1f1f1f)
+    word-break: break-word
+    font-size: .95rem
+    line-height: 1.65
 
     & > *:last-child
-      margin-bottom: 0
+      margin-bottom: 0 !important
 
-  .shuoshuo-footer
+    p
+      margin: 0 0 6px !important
+
+      &:last-child
+        margin-bottom: 0 !important
+
+    a
+      color: #576b95
+      text-decoration: none
+
+      &:hover
+        text-decoration: underline
+
+  /* 朋友圈九宫格 */
+  .moments-photos
+    display: grid
+    gap: 6px
+    width: max-content
+    max-width: 100%
+    margin: 8px 0 6px
+
+    .moments-photo-item
+      position: relative
+      display: block
+      overflow: hidden
+      padding: 0
+      width: 100%
+      border: 0
+      border-radius: 4px
+      background: rgba(128, 128, 128, .08)
+      line-height: 0
+      cursor: zoom-in
+
+      &:hover
+        text-decoration: none
+
+      img
+        display: block !important
+        margin: 0 !important
+        width: 100% !important
+        height: 100% !important
+        max-width: 100% !important
+        border-radius: 0 !important
+        object-fit: cover !important
+        transition: transform .3s ease
+
+      &:hover img
+        transform: scale(1.04)
+
+    &.count-1
+      .moments-photo-item
+        max-width: 260px
+        max-height: 320px
+        border-radius: 6px
+
+        img
+          width: auto !important
+          max-width: 260px !important
+          height: auto !important
+          max-height: 320px !important
+          object-fit: contain !important
+
+    &.count-2,
+    &.count-4
+      grid-template-columns: repeat(2, 110px)
+
+      .moments-photo-item
+        border-radius: 4px
+        aspect-ratio: 1
+
+    &.count-3,
+    &.count-5,
+    &.count-6,
+    &.count-7,
+    &.count-8,
+    &.count-9
+      grid-template-columns: repeat(3, 95px)
+
+      .moments-photo-item
+        border-radius: 4px
+        aspect-ratio: 1
+
+    +maxWidth768()
+      &.count-1 .moments-photo-item
+        max-width: 65vw
+
+        img
+          max-width: 65vw !important
+
+      &.count-2,
+      &.count-4
+        grid-template-columns: repeat(2, unquote("min(32vw, 110px)"))
+
+      &.count-3,
+      &.count-5,
+      &.count-6,
+      &.count-7,
+      &.count-8,
+      &.count-9
+        grid-template-columns: repeat(3, unquote("min(25vw, 92px)"))
+
+  .moments-tags
+    display: flex
+    flex-wrap: wrap
+    gap: 6px
+    margin: 6px 0
+
+  .moments-tag
+    color: #576b95
+    font-size: .82rem
+    cursor: default
+
+  .moments-item-footer
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-top: 10px
+
+  .moments-meta-info
     display: flex
     align-items: center
+    gap: 8px
+    color: #999
+    font-size: .78rem
 
-    &.flex-between
-      justify-content: space-between
+  .moments-tail
+    display: inline-flex
+    align-items: center
+    gap: 3px
+    color: #8c8c8c
 
-    &.flex-end
-      justify-content: flex-end
-
-    .shuoshuo-tag
-      display: inline-block
-      margin-right: 8px
-      padding: 0 8px
-      width: fit-content
-      border: 1px solid $light-blue
-      border-radius: 12px
-      color: $light-blue
+    i
       font-size: .85em
-      cursor: default
-      transition: all .2s ease-in-out
 
-      &:hover
-        background: $light-blue
-        color: var(--white)
+  .moments-actions
+    display: flex
+    align-items: center
+    gap: 8px
 
-    .shuoshuo-comment-btn
-      padding: 2px
-      color: #90a4ae
-      cursor: pointer
+  .moments-action-btn
+    display: inline-flex
+    align-items: center
+    gap: 4px
+    padding: 3px 9px
+    border: 1px solid rgba(0, 0, 0, .06)
+    border-radius: 4px
+    background: rgba(0, 0, 0, .02)
+    color: #576b95
+    font-weight: 500
+    font-size: .8rem
+    line-height: 1
+    cursor: pointer
+    transition: all .2s ease
 
-      &:hover
-        color: $light-blue
+    &:hover
+      border-color: rgba(87, 107, 149, .3)
+      background: rgba(87, 107, 149, .08)
 
-  .shuoshuo-comment
-    padding-top: 10px
+    &.moments-action-like.is-active
+      border-color: rgba(224, 36, 94, .3)
+      background: rgba(224, 36, 94, .08)
+      color: #e0245e
+
+  /* 朋友圈气泡式互动区 */
+  .moments-interactive-box
+    position: relative
+    display: none
+    margin-top: 10px
+    border-radius: 4px
+    background: #f7f7f7
+
+    &.has-content
+      display: block
+
+    &::before
+      position: absolute
+      top: -5px
+      right: 22px
+      width: 0
+      height: 0
+      border-right: 5px solid transparent
+      border-bottom: 5px solid #f7f7f7
+      border-left: 5px solid transparent
+      content: ''
+
+  .moments-likes-row
+    display: none
+    align-items: center
+    gap: 6px
+    padding: 7px 10px
+    color: #576b95
+    font-size: .82rem
+
+    &.is-active
+      display: flex
+
+    .like-heart-icon
+      color: #e0245e
+      font-size: .88rem
+
+    .like-me
+      font-weight: 600
+
+  .moments-comment-box
+    padding: 10px 12px 14px
+    border-top: 1px solid rgba(0, 0, 0, .05)
 
     &.no-comment
       display: none
+      padding: 0
+      border-top: none
 
+  .moments-loading,
+  .moments-empty,
+  .moments-error
+    display: flex
+    flex-direction: column
+    justify-content: center
+    align-items: center
+    gap: 12px
+    padding: 60px 20px
+    color: #999
+    font-size: .95rem
+
+    i
+      color: #576b95
+      font-size: 2rem
+
+/* 分页 */
 .shuoshuo-navigation
   display: flex
   justify-content: center
   align-items: center
-  margin-top: 20px
-  padding: 20px 0
+  gap: 8px
+  margin-top: 24px
+  padding: 16px 0
 
   button
     display: flex
     justify-content: center
     align-items: center
-    width: 2.7em
-    height: 2.7em
-    background-color: var(--btn-bg)
-    color: var(--btn-color)
+    width: 2.6em
+    height: 2.6em
+    border: 1px solid rgba(0, 0, 0, .06)
+    border-radius: 8px
+    background: var(--card-bg, #fff)
+    color: var(--font-color, #555)
     font-size: .9em
-    line-height: 2.5em
+    cursor: pointer
     transition: all .2s ease-in-out
-    addBorderRadius(6)
 
-    &:not(:disabled)
-      @extend .btn-effects
-
-    &:hover:not(:disabled)
-      background-color: var(--btn-hover-color)
+    &:not(:disabled):hover
+      border-color: #576b95
+      background-color: #576b95
+      color: #fff
 
     &:disabled
-      background: #f5f5f5
-      color: #ccc
-      opacity: .5
+      background: rgba(0, 0, 0, .03)
+      color: #bbb
+      opacity: .6
       cursor: not-allowed
 
   .shuoshuo-page-info
-    margin: 0 15px
-    color: #858585
+    margin: 0 10px
+    color: #888
     white-space: nowrap
-    font-size: .9em
+    font-size: .88em
 
   .shuoshuo-page-input
-    margin-right: 12px
-    padding: 0 15px
-    height: 2.7em
-    border: 1px solid var(--btn-bg)
-    background: var(--card-bg)
-    color: #858585
+    height: 2.6em
+    padding: 0 10px
+    border: 1px solid rgba(0, 0, 0, .08)
+    border-radius: 8px
+    background: var(--card-bg, #fff)
+    color: #666
     text-align: center
     font-size: .9em
     transition: all .2s ease-in-out
-    addBorderRadius(6)
 
     &:focus
+      border-color: #576b95
       outline: none
-      border-width: 2px
 
-      &::placeholder
-        color: transparent
-
-    /* 隱藏 number 輸入框的上下箭頭 */
     &::-webkit-outer-spin-button,
     &::-webkit-inner-spin-button
       margin: 0
       -webkit-appearance: none
 
-    /* Firefox */
     -moz-appearance: textfield
 
-    /* 當作為頁碼按鈕時的樣式 */
-    &.shuoshuo-page-num
-      min-width: 40px
-      width: 40px
-      border: none
-      background: $light-blue
-      color: var(--white)
-      font-weight: 500
-      cursor: text
+/* 全屏大图预览 */
+.moments-preview
+  position: fixed
+  top: 0
+  right: 0
+  bottom: 0
+  left: 0
+  z-index: 9999
+  display: flex
+  justify-content: center
+  align-items: center
+  background: rgba(0, 0, 0, .88)
+  backdrop-filter: blur(20px)
+  -webkit-backdrop-filter: blur(20px)
 
-      &:focus
-        border: 1px solid $light-blue
-        background: var(--white)
-        color: #333
+  &[hidden]
+    display: none
 
-    /* 超出範圍時的紅色樣式 */
-    &.invalid
-      border-color: #ff4757
-      background-color: #ffeaea
-      color: #ff4757
-      animation: shake .5s ease-in-out
+  .moments-preview-image
+    width: auto !important
+    height: auto !important
+    max-width: 90vw !important
+    max-height: 84vh !important
+    margin: 0 !important
+    border-radius: 6px !important
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .6)
+    object-fit: contain !important
+    cursor: default
 
-  /* 震動動畫 */
-  @keyframes shake
-    0%,
-    100%
-      transform: translateX(0)
+  .moments-preview-loading
+    position: absolute
+    top: 50%
+    left: 50%
+    display: none
+    width: 40px
+    height: 40px
+    margin: -20px 0 0 -20px
+    border: 3px solid rgba(255, 255, 255, .25)
+    border-top-color: #576b95
+    border-radius: 50%
+    pointer-events: none
+    animation: moments-preview-spin .7s linear infinite
 
-    10%,
-    30%,
-    50%,
-    70%,
-    90%
-      transform: translateX(-2px)
+  &.is-loading
+    .moments-preview-loading
+      display: block
 
-    20%,
-    40%,
-    60%,
-    80%
-      transform: translateX(2px)
+    .moments-preview-image
+      opacity: 0
+
+  button
+    position: absolute
+    display: flex
+    justify-content: center
+    align-items: center
+    border: 1px solid rgba(255, 255, 255, .15)
+    border-radius: 50%
+    background: rgba(0, 0, 0, .45)
+    color: #fff
+    cursor: pointer
+    transition: background .2s ease, transform .2s ease
+
+    &:hover
+      background: rgba(87, 107, 149, .8)
+      transform: scale(1.08)
+
+  .moments-preview-close
+    top: 20px
+    right: 20px
+    width: 42px
+    height: 42px
+    font-size: 20px
+
+  .moments-preview-prev,
+  .moments-preview-next
+    top: 50%
+    width: 48px
+    height: 48px
+    font-size: 20px
+    transform: translateY(-50%)
+
+    &:hover
+      transform: translateY(-50%) scale(1.08)
+
+  .moments-preview-prev
+    left: 20px
+
+  .moments-preview-next
+    right: 20px
+
+  .moments-preview-count
+    position: absolute
+    bottom: 24px
+    left: 50%
+    padding: 4px 14px
+    border-radius: 16px
+    background: rgba(0, 0, 0, .5)
+    color: #fff
+    font-size: 13px
+    transform: translateX(-50%)
+    backdrop-filter: blur(8px)
+
+  &.is-single
+    .moments-preview-prev,
+    .moments-preview-next,
+    .moments-preview-count
+      display: none
+
+body.moments-preview-open
+  overflow: hidden
+
+@keyframes moments-preview-spin
+  to
+    transform: rotate(360deg)
+
+/* 暗色模式适配 */
+[data-theme="dark"]
+  #body-wrap.type-shuoshuo
+    #page-header.nav-fixed #nav,
+    #page-header.not-top-img #nav
+      background: rgba(18, 20, 23, .86)
+      border-bottom: 1px solid rgba(255, 255, 255, .08)
+      box-shadow: 0 2px 12px rgba(0, 0, 0, .4)
+
+    .shuoshuo-moments-wrap
+      border-color: rgba(255, 255, 255, .08)
+      background: rgba(26, 29, 35, .95)
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .4)
+
+    .moments-avatar-box
+      border-color: #1a1d23
+      background: #1a1d23
+
+    .moments-signature
+      border-bottom-color: rgba(255, 255, 255, .08)
+      color: #94a3b8
+
+  #article-container
+    .moments-item
+      border-bottom-color: rgba(255, 255, 255, .08)
+
+    .moments-item-author
+      color: #7b9ed9
+
+    .moments-action-btn
+      border-color: rgba(255, 255, 255, .1)
+      background: rgba(255, 255, 255, .04)
+      color: #7b9ed9
+
+      &:hover
+        border-color: rgba(123, 158, 217, .4)
+        background: rgba(123, 158, 217, .12)
+
+      &.moments-action-like.is-active
+        border-color: rgba(224, 36, 94, .4)
+        background: rgba(224, 36, 94, .12)
+        color: #ff5277
+
+    .moments-interactive-box
+      background: rgba(255, 255, 255, .04)
+
+      &::before
+        border-bottom-color: rgba(255, 255, 255, .04)
+
+    .moments-likes-row
+      color: #7b9ed9
+
+      .like-me
+        color: #7b9ed9
+
+    .moments-comment-box
+      border-top-color: rgba(255, 255, 255, .06)
+
+    .moments-loading,
+    .moments-empty,
+    .moments-error
+      color: #94a3b8
+
+      i
+        color: #7b9ed9
+
+  .shuoshuo-navigation
+    button
+      border-color: rgba(255, 255, 255, .08)
+      background: rgba(26, 29, 35, .88)
+      color: #aaa
+
+      &:disabled
+        background: rgba(255, 255, 255, .02)
+        color: #555
+
+    .shuoshuo-page-input
+      border-color: rgba(255, 255, 255, .08)
+      background: rgba(26, 29, 35, .88)
+      color: #aaa

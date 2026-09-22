@@ -1,309 +1,514 @@
-//- - author:
-//-   avatar:
-//-   date:
-//-   content:
-//-   tags:
-//-     - tag1
-//-     - tag2
-
 - page.toc = false
 
-#article-container
-  if page.shuoshuo_url || (site.data.shuoshuo && site.data.shuoshuo.length)
-    if page.comments !== false && theme.comments.use
-      - commentsJsLoad = true
+.shuoshuo-moments-wrap
+  .moments-header
+    .moments-cover(style=`background-image: url('${theme.default_top_img || theme.index_img || url_for(theme.avatar.img)}')`)
+      .moments-cover-mask
+      .moments-user-row
+        span.moments-username= config.author || '楠瓜'
+        .moments-avatar-box
+          img.no-lightbox(src=url_for(theme.avatar.img) alt=config.author)
+    .moments-signature
+      span.signature-text= theme.aside && theme.aside.card_author && theme.aside.card_author.description || config.description || '自在摇曳，生生不息。'
+
+  #article-container
+    if page.shuoshuo_url || (site.data.shuoshuo && site.data.shuoshuo.length)
+      if page.comments !== false && theme.comments.use
+        - commentsJsLoad = true
+
+        script.
+          (() => {
+            const commentDiv = `!{partial('includes/third-party/comments/index', {}, {cache: true})}`
+
+            const runDestroy = (shuoshuoComment) => {
+              if (!shuoshuoComment) return
+
+              for (const [key, fn] of Object.entries(shuoshuoComment)) {
+                if (key.startsWith('destroy')) fn()
+              }
+            }
+
+            window.addCommentToShuoshuo = e => {
+              const btn = e.target.closest('.moments-action-comment')
+              if (!btn) return
+
+              const item = btn.closest('.moments-item')
+              if (!item) return
+              const ele = item.querySelector('.moments-comment-box')
+              const interactiveZone = item.querySelector('.moments-interactive-box')
+              if (!ele) return
+
+              const { shuoshuoComment } = window
+              const isInclude = ele.classList.contains('no-comment')
+              runDestroy(shuoshuoComment)
+              if (isInclude) {
+                ele.classList.remove('no-comment')
+                if (interactiveZone) interactiveZone.classList.add('has-content')
+                ele.innerHTML = commentDiv
+                const key = `${location.pathname.replace(/\/$/, '')}?key=${ele.getAttribute('data-key')}`
+                btf.switchComments(ele, key)
+                shuoshuoComment && shuoshuoComment.loadComment && shuoshuoComment.loadComment(ele, key)
+              } else {
+                ele.classList.add('no-comment')
+                ele.innerHTML = ''
+                if (interactiveZone) {
+                  const likesWrap = interactiveZone.querySelector('.moments-likes-row')
+                  if (!likesWrap || !likesWrap.classList.contains('is-active')) {
+                    interactiveZone.classList.remove('has-content')
+                  }
+                }
+              }
+            }
+          })()
+
+      - const localDate = page.shuoshuo_url ? [] : shuoshuoFN(site.data.shuoshuo, page)
+
+      if !page.shuoshuo_url
+        script(type='application/json' id='shuoshuo-data')!= safeJSON(localDate)
 
       script.
         (() => {
-          const commentDiv = `!{partial('includes/third-party/comments/index', {}, {cache: true})}`
+          const limitConfig = !{ JSON.stringify(page.limit || {}) }
 
-          const runDestroy = (shuoshuoComment) => {
-            if (!shuoshuoComment) return
+          const escapeHtml = str => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
-            for (const [key, fn] of Object.entries(shuoshuoComment)) {
-              if (key.startsWith('destroy')) fn()
+          const sortDataByDate = data => data.sort((a, b) => new Date(b.date) - new Date(a.date))
+
+          const filterDataByLimit = (data, limit) => {
+            if (!limit || !limit.type) return data
+            if (limit.type === 'num') return data.slice(0, limit.value)
+            if (limit.type === 'date') {
+              const limitDate = new Date(limit.value)
+              return data.filter(item => new Date(item.date) >= limitDate)
+            }
+            return data
+          }
+
+          const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+            timeZone: !{JSON.stringify(config.timezone || '')} || Intl.DateTimeFormat().resolvedOptions().timeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+
+          const formatToTimeZone = (date) => {
+            const fullDate = date.length === 10 ? `${date} 00:00:00` : date
+            const [day, month, year, hour, minute, second] = dateFormatter.format(new Date(fullDate)).match(/\d+/g)
+            return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+          }
+
+          let currentPage = 1
+          const itemsPerPage = 8
+          let totalPages = 0
+          let data = []
+          const maxPhotos = 9
+
+          const extractShuoshuoPhotos = (item, html) => {
+            const photos = []
+            const seen = new Set()
+            const push = src => {
+              const url = String(src || '').trim()
+              if (!url || seen.has(url) || photos.length >= maxPhotos) return
+              seen.add(url)
+              photos.push(url)
+            }
+
+            if (Array.isArray(item.images)) {
+              item.images.forEach(image => {
+                if (typeof image === 'string') push(image)
+                else if (image && typeof image === 'object') push(image.src || image.url)
+              })
+            }
+
+            const parser = new DOMParser()
+            const doc = parser.parseFromString(`<div id="shuoshuo-parse">${html || ''}</div>`, 'text/html')
+            const root = doc.getElementById('shuoshuo-parse')
+            root.querySelectorAll('img').forEach(img => {
+              push(img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('data-lazy-src'))
+              let parent = img.parentElement
+              img.remove()
+              if (parent && parent !== root && parent.tagName === 'A' && !parent.textContent.trim() && parent.children.length === 0) {
+                const anchor = parent
+                parent = anchor.parentElement
+                anchor.remove()
+              }
+              if (parent && parent !== root && parent.tagName === 'P' && !parent.textContent.trim() && parent.children.length === 0) {
+                parent.remove()
+              }
+            })
+
+            return { html: root.innerHTML.trim(), photos }
+          }
+
+          const renderPhotos = photos => {
+            if (!photos.length) return ''
+            const cells = photos.map(src => `
+              <button type="button" class="moments-photo-item" data-src="${escapeHtml(src)}">
+                <img class="no-lightbox" src="${escapeHtml(src)}" alt="" loading="lazy">
+              </button>`).join('')
+            return `<div class="moments-photos count-${photos.length}">${cells}</div>`
+          }
+
+          const previewRoot = document.createElement('div')
+          previewRoot.className = 'moments-preview'
+          previewRoot.hidden = true
+          previewRoot.innerHTML = `
+            <button type="button" class="moments-preview-close" aria-label="关闭预览"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="moments-preview-prev" aria-label="上一张"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="moments-preview-loading" role="status" aria-label="图片加载中"></div>
+            <img class="no-lightbox moments-preview-image" alt="">
+            <button type="button" class="moments-preview-next" aria-label="下一张"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="moments-preview-count"></div>
+          `
+          document.body.appendChild(previewRoot)
+
+          const previewImage = previewRoot.querySelector('.moments-preview-image')
+          const previewCount = previewRoot.querySelector('.moments-preview-count')
+          let previewUrls = []
+          let previewIndex = 0
+          let previewToken = 0
+
+          const showPreviewImage = () => {
+            const nextSrc = previewUrls[previewIndex] || ''
+            const token = ++previewToken
+            const multiple = previewUrls.length > 1
+            previewRoot.classList.toggle('is-single', !multiple)
+            previewCount.textContent = multiple ? `${previewIndex + 1} / ${previewUrls.length}` : ''
+
+            const cached = previewImage.getAttribute('src') === nextSrc && previewImage.complete && previewImage.naturalWidth > 0
+            if (cached) {
+              previewRoot.classList.remove('is-loading')
+              return
+            }
+
+            previewRoot.classList.add('is-loading')
+            previewImage.onload = () => {
+              if (token !== previewToken) return
+              previewRoot.classList.remove('is-loading')
+            }
+            previewImage.onerror = () => {
+              if (token !== previewToken) return
+              previewRoot.classList.remove('is-loading')
+            }
+            previewImage.src = nextSrc
+          }
+
+          const openPreview = (urls, index) => {
+            previewUrls = urls
+            previewIndex = index
+            showPreviewImage()
+            previewRoot.hidden = false
+            document.body.classList.add('moments-preview-open')
+          }
+
+          const closePreview = () => {
+            previewToken += 1
+            previewRoot.hidden = true
+            previewRoot.classList.remove('is-loading')
+            previewImage.onload = null
+            previewImage.onerror = null
+            previewImage.src = ''
+            previewUrls = []
+            document.body.classList.remove('moments-preview-open')
+          }
+
+          const stepPreview = delta => {
+            if (previewUrls.length < 2) return
+            previewIndex = (previewIndex + delta + previewUrls.length) % previewUrls.length
+            showPreviewImage()
+          }
+
+          previewRoot.addEventListener('click', event => {
+            if (event.target.closest('.moments-preview-close')) {
+              closePreview()
+              return
+            }
+            if (event.target.closest('.moments-preview-prev')) {
+              stepPreview(-1)
+              return
+            }
+            if (event.target.closest('.moments-preview-next')) {
+              stepPreview(1)
+              return
+            }
+            if (event.target === previewRoot) closePreview()
+          })
+
+          document.addEventListener('keydown', event => {
+            if (previewRoot.hidden) return
+            if (event.key === 'Escape') closePreview()
+            else if (event.key === 'ArrowLeft') stepPreview(-1)
+            else if (event.key === 'ArrowRight') stepPreview(1)
+          })
+
+          const likeStorageKey = 'nangua-shuoshuo-likes'
+
+          const readLikes = () => {
+            try {
+              const stored = JSON.parse(localStorage.getItem(likeStorageKey) || '[]')
+              return new Set(Array.isArray(stored) ? stored : [])
+            } catch {
+              return new Set()
             }
           }
 
-          window.addCommentToShuoshuo = e => {
-            const btn = e.target.closest('.shuoshuo-comment-btn')
-            if (!btn) return
+          const paintLikes = () => {
+            const likes = readLikes()
 
-            const ele = btn.closest('.container').nextElementSibling
-            const { shuoshuoComment } = window
-            const isInclude = ele.classList.contains('no-comment')
-            runDestroy(shuoshuoComment)
-            if (isInclude) {
-              ele.classList.remove('no-comment')
-              ele.innerHTML = commentDiv
-              const key = `${location.pathname.replace(/\/$/, '')}?key=${ele.getAttribute('data-key')}`
-              btf.switchComments(ele, key)
-              shuoshuoComment.loadComment && shuoshuoComment.loadComment(ele, key)
+            document.querySelectorAll('.moments-item').forEach(itemEl => {
+              const likeBtn = itemEl.querySelector('.moments-action-like')
+              if (!likeBtn) return
+              const key = likeBtn.dataset.key
+              const active = likes.has(key)
+              likeBtn.classList.toggle('is-active', active)
+              likeBtn.setAttribute('aria-pressed', active ? 'true' : 'false')
+              const icon = likeBtn.querySelector('i')
+              if (icon) icon.className = active ? 'fa-solid fa-heart' : 'fa-regular fa-heart'
+              const textSpan = likeBtn.querySelector('.action-label')
+              if (textSpan) textSpan.textContent = active ? '取消' : '赞'
+
+              const interactiveZone = itemEl.querySelector('.moments-interactive-box')
+              const likesWrap = itemEl.querySelector('.moments-likes-row')
+              const commentEl = itemEl.querySelector('.moments-comment-box')
+              const hasOpenComment = commentEl && !commentEl.classList.contains('no-comment')
+
+              if (likesWrap) {
+                likesWrap.classList.toggle('is-active', active)
+              }
+              if (interactiveZone) {
+                interactiveZone.classList.toggle('has-content', active || Boolean(hasOpenComment))
+              }
+            })
+          }
+
+          document.getElementById('article-container').addEventListener('click', event => {
+            const likeButton = event.target.closest('.moments-action-like')
+            if (likeButton) {
+              const likes = readLikes()
+              const key = likeButton.dataset.key
+              if (likes.has(key)) likes.delete(key)
+              else likes.add(key)
+              localStorage.setItem(likeStorageKey, JSON.stringify([...likes]))
+              paintLikes()
+              return
             }
+
+            const button = event.target.closest('.moments-photo-item')
+            if (!button) return
+            const group = [...button.parentElement.querySelectorAll('.moments-photo-item')]
+            const urls = group.map(item => item.dataset.src).filter(Boolean)
+            const index = Math.max(0, group.indexOf(button))
+            if (!urls.length) return
+            openPreview(urls, index)
+          })
+
+          const renderData = (dataSlice) => {
+            const content = dataSlice.map((item, index) => {
+              const formattedDate = formatToTimeZone(item.date)
+              const tags = item.tags && item.tags.map(tag => `<span class="moments-tag">#${escapeHtml(tag)}</span>`).join('') || ''
+              const commentButton = item.key && !{commentsJsLoad || false}
+                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论">
+                    <i class="fa-regular fa-comment-dots"></i><span class="action-label">评论</span>
+                  </button>`
+                : ''
+              const likeButton = item.key
+                ? `<button type="button" class="moments-action-btn moments-action-like" data-key="${escapeHtml(item.key)}" aria-pressed="false" aria-label="点赞">
+                    <i class="fa-regular fa-heart"></i><span class="action-label">赞</span>
+                  </button>`
+                : ''
+              const commentContainer = item.key
+                ? `<div class="moments-comment-box no-comment" data-key="${escapeHtml(item.key)}"></div>`
+                : ''
+              const parsed = extractShuoshuoPhotos(item, item.content || '')
+              const contentHtml = parsed.html ? `<div class="moments-text">${parsed.html}</div>` : ''
+              const photosHtml = renderPhotos(parsed.photos)
+              const authorName = item.author ? escapeHtml(item.author) : !{JSON.stringify(config.author || '楠瓜')}
+              const avatarImg = item.avatar ? escapeHtml(item.avatar) : !{JSON.stringify(url_for(theme.avatar.img))}
+
+              return `
+                <div class="moments-item" data-key="${escapeHtml(item.key || '')}">
+                  <div class="moments-item-avatar">
+                    <img class="no-lightbox" src="${avatarImg}" alt="${authorName}">
+                  </div>
+                  <div class="moments-item-main">
+                    <div class="moments-item-author">${authorName}</div>
+                    ${contentHtml}
+                    ${photosHtml}
+                    ${tags ? `<div class="moments-tags">${tags}</div>` : ''}
+                    <div class="moments-item-footer">
+                      <div class="moments-meta-info">
+                        <time class="moments-date" title="${formattedDate}">${btf.diffDate(formattedDate, true)}</time>
+                        <span class="moments-tail"><i class="fa-solid fa-location-dot"></i> 楠瓜的小窝</span>
+                      </div>
+                      <div class="moments-actions">
+                        ${likeButton}
+                        ${commentButton}
+                      </div>
+                    </div>
+                    <div class="moments-interactive-box" data-key="${escapeHtml(item.key || '')}">
+                      <div class="moments-likes-row">
+                        <i class="fa-solid fa-heart like-heart-icon"></i>
+                        <span class="moments-like-users"><span class="like-me">你</span> 觉得很赞</span>
+                      </div>
+                      ${commentContainer}
+                    </div>
+                  </div>
+                </div>`
+            }).join('')
+
+            const container = document.getElementById('article-container')
+            container.innerHTML = `<div class="moments-list">${content}</div>`
+
+            paintLikes()
+            document.dispatchEvent(new Event('shuoshuo:rendered'))
+          }
+
+          const setupNavEvents = (nav) => {
+            nav.querySelector('.shuoshuo-prev-btn').addEventListener('click', () => {
+              if (currentPage > 1) { currentPage--; renderPage(currentPage) }
+            })
+            nav.querySelector('.shuoshuo-next-btn').addEventListener('click', () => {
+              if (currentPage < totalPages) { currentPage++; renderPage(currentPage) }
+            })
+
+            const input = nav.querySelector('.shuoshuo-page-input')
+
+            input.addEventListener('focus', e => { e.target.placeholder = '' })
+            input.addEventListener('blur', e => {
+              if (!e.target.value.trim()) e.target.placeholder = currentPage
+            })
+
+            input.addEventListener('input', e => {
+              const value = parseInt(e.target.value) || 0
+              let wasInvalid = false
+
+              if (value > totalPages) { e.target.value = totalPages; wasInvalid = true }
+              else if (value < 1 && e.target.value !== '') { e.target.value = 1; wasInvalid = true }
+
+              if (wasInvalid) {
+                e.target.classList.add('invalid')
+                setTimeout(() => e.target.classList.remove('invalid'), 500)
+              }
+            })
+
+            input.addEventListener('keydown', e => {
+              const value = e.target.value + e.key
+
+              if (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete' ||
+                  e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
+                  e.key === 'Tab' || e.ctrlKey || e.metaKey) {
+                if (e.key === 'Enter') {
+                  const inputValue = e.target.value.trim()
+                  const inputPage = inputValue === '' ? currentPage : parseInt(inputValue)
+                  if (inputPage >= 1 && inputPage <= totalPages && inputPage !== currentPage) {
+                    currentPage = inputPage
+                    renderPage(currentPage)
+                  } else if (inputValue === '') {
+                    renderPage(currentPage)
+                  }
+                }
+                return
+              }
+
+              if (!/^\d$/.test(e.key)) {
+                e.preventDefault()
+                return
+              }
+
+              const newValue = parseInt(value) || 0
+              if (newValue > totalPages || (value.length > 1 && newValue === 0)) {
+                e.preventDefault()
+                e.target.classList.add('invalid')
+                setTimeout(() => e.target.classList.remove('invalid'), 500)
+              }
+            })
+          }
+
+          const renderNavigation = () => {
+            const container = document.getElementById('article-container')
+            let nav = container.nextElementSibling
+            const pageInfoTemplate = '#{__('pagination.page_info')}'
+            const pageInfoText = pageInfoTemplate
+              .replace(/\$\{current}/g, currentPage)
+              .replace(/\$\{total}/g, totalPages)
+
+            if (!nav || !nav.classList.contains('shuoshuo-navigation')) {
+              nav = document.createElement('div')
+              nav.className = 'shuoshuo-navigation'
+              nav.innerHTML = `
+                <button class="shuoshuo-prev-btn" aria-label="上一页"><i class="fa-solid fa-chevron-left"></i></button>
+                <span class="shuoshuo-page-info"></span>
+                <input type="number" class="shuoshuo-page-input" min="1" aria-label="输入页码">
+                <button class="shuoshuo-next-btn" aria-label="下一页"><i class="fa-solid fa-chevron-right"></i></button>
+              `
+              container.insertAdjacentElement('afterend', nav)
+              setupNavEvents(nav)
+            }
+
+            nav.querySelector('.shuoshuo-page-info').textContent = pageInfoText
+            nav.querySelector('.shuoshuo-prev-btn').disabled = currentPage === 1
+            nav.querySelector('.shuoshuo-next-btn').disabled = currentPage === totalPages
+            const input = nav.querySelector('.shuoshuo-page-input')
+            input.max = totalPages
+            input.placeholder = currentPage
+          }
+
+          const renderPage = (page) => {
+            const start = (page - 1) * itemsPerPage
+            const end = start + itemsPerPage
+            const pageData = data.slice(start, end)
+            renderData(pageData)
+            renderNavigation()
+          }
+
+          const loadShuoshuo = async () => {
+            const container = document.getElementById('article-container')
+            try {
+              let originData = []
+              if (!{Boolean(page.shuoshuo_url)}) {
+                container.innerHTML = '<div class="moments-loading"><i class="fa-solid fa-circle-notch fa-spin"></i><span>正在加载动态...</span></div>'
+                const response = await fetch('!{url_for(page.shuoshuo_url)}')
+                if (!response.ok) throw new Error(`HTTP ${response.status}`)
+                originData = await response.json()
+              } else {
+                const dataElement = document.getElementById('shuoshuo-data')
+                originData = dataElement ? JSON.parse(dataElement.textContent) : []
+              }
+
+              data = filterDataByLimit(sortDataByDate(originData), limitConfig)
+              totalPages = Math.ceil(data.length / itemsPerPage)
+
+              if (data.length === 0) {
+                container.innerHTML = '<div class="moments-empty"><i class="fa-regular fa-comment-dots"></i><p>还没有发布任何说说~</p></div>'
+                return
+              }
+
+              renderPage(currentPage)
+            } catch (error) {
+              console.error(error)
+              container.innerHTML = '<div class="moments-error"><i class="fa-solid fa-circle-exclamation"></i><p>加载说说失败，请稍后刷新重试</p></div>'
+            }
+          }
+
+          const pjaxCleanup = () => {
+            closePreview()
+            previewRoot.remove()
+            const container = document.getElementById('article-container')
+            if (container) {
+              const nav = container.nextElementSibling
+              if (nav && nav.classList.contains('shuoshuo-navigation')) nav.remove()
+            }
+            document.removeEventListener('pjax:send', pjaxCleanup)
+          }
+
+          if (window.pjax) {
+            document.addEventListener('pjax:send', pjaxCleanup)
+            loadShuoshuo()
+          } else {
+            window.addEventListener('load', loadShuoshuo)
           }
         })()
-
-
-    - const localDate = page.shuoshuo_url ? [] : shuoshuoFN(site.data.shuoshuo, page)
-
-    if !page.shuoshuo_url
-      script(type='application/json' id='shuoshuo-data')!= safeJSON(localDate)
-
-    - const { enable, native, placeholder, field } = theme.lazyload
-    script.
-      (() => {
-        const limitConfig = !{ JSON.stringify(page.limit || {}) }
-
-        const escapeHtml = str => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-
-        const sortDataByDate = data => data.sort((a, b) => new Date(b.date) - new Date(a.date))
-
-        const filterDataByLimit = (data, limit) => {
-          if (!limit || !limit.type) return data
-          if (limit.type === 'num') return data.slice(0, limit.value)
-          if (limit.type === 'date') {
-            const limitDate = new Date(limit.value)
-            return data.filter(item => new Date(item.date) >= limitDate)
-          }
-          return data
-        }
-
-        const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-          timeZone: !{JSON.stringify(config.timezone || '')} || Intl.DateTimeFormat().resolvedOptions().timeZone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        })
-
-        const formatToTimeZone = (date) => {
-          const fullDate = date.length === 10 ? `${date} 00:00:00` : date
-          const [day, month, year, hour, minute, second] = dateFormatter.format(new Date(fullDate)).match(/\d+/g)
-          return `${year}-${month}-${day} ${hour}:${minute}:${second}`
-        }
-
-        const addLazyload = str => {
-          const lazyConfig = {
-            enable: !{Boolean(enable)},
-            native: !{Boolean(native)},
-            field: !{JSON.stringify(field || '')},
-            placeholder: !{JSON.stringify(url_for(placeholder))},
-          }
-
-          if (!lazyConfig.enable || lazyConfig.field !== 'site' || str.indexOf('<img') === -1) return str
-          const parser = new DOMParser()
-          const doc = parser.parseFromString(str, 'text/html')
-          const images = doc.querySelectorAll('img')
-
-          images.forEach(img => {
-            if (lazyConfig.native) {
-              img.setAttribute('loading', 'lazy')
-            } else {
-              const src = img.getAttribute('src')
-              img.setAttribute('data-lazy-src', src)
-
-              if (lazyConfig.placeholder) {
-                img.setAttribute('src', lazyConfig.placeholder)
-              } else {
-                img.removeAttribute('src')
-              }
-            }
-          })
-          return doc.body.innerHTML
-        }
-
-        let currentPage = 1
-        const itemsPerPage = 8
-        let totalPages = 0
-        let data = []
-
-        const renderData = (dataSlice) => {
-          const content = dataSlice.map(item => {
-            const formattedDate = formatToTimeZone(item.date)
-            const tags = item.tags && item.tags.map(tag => `<span class="shuoshuo-tag">${escapeHtml(tag)}</span>`).join('') || ''
-            const commentButton = item.key && !{commentsJsLoad || false}
-              ? `<div class="shuoshuo-comment-btn" onclick="addCommentToShuoshuo(event)">
-                  <i class="fa-solid fa-comments"></i>
-                </div>`
-              : ''
-            const commentContainer = item.key
-              ? `<div class="shuoshuo-comment no-comment" data-key="${escapeHtml(item.key)}"></div>`
-              : ''
-
-            return `
-              <div class="shuoshuo-item">
-                <div class="container">
-                  <div class="shuoshuo-item-header">
-                    <div class="shuoshuo-avatar">
-                      <img class="no-lightbox" src="${item.avatar ? escapeHtml(item.avatar) : !{JSON.stringify(url_for(theme.avatar.img))}}">
-                    </div>
-                    <div class="shuoshuo-info">
-                      <div class="shuoshuo-author">${item.author ? escapeHtml(item.author) : !{JSON.stringify(config.author || '')}}</div>
-                      <time class="shuoshuo-date" title="${formattedDate}">
-                        ${btf.diffDate(formattedDate, true)}
-                      </time>
-                    </div>
-                  </div>
-                  <div class="shuoshuo-content">${addLazyload(item.content)}</div>
-                  <div class="shuoshuo-footer ${tags ? 'flex-between' : 'flex-end'}">
-                    ${tags ? `<div class="shuoshuo-tags">${tags}</div>` : ''}
-                    ${commentButton}
-                  </div>
-                </div>
-                ${commentContainer}
-              </div>`
-          }).join('')
-
-          const container = document.getElementById('article-container')
-          container.innerHTML = content
-
-          window.lazyLoadInstance && window.lazyLoadInstance.update()
-          document.dispatchEvent(new Event('shuoshuo:rendered'))
-        }
-
-        const setupNavEvents = (nav) => {
-          nav.querySelector('.shuoshuo-prev-btn').addEventListener('click', () => {
-            if (currentPage > 1) { currentPage--; renderPage(currentPage) }
-          })
-          nav.querySelector('.shuoshuo-next-btn').addEventListener('click', () => {
-            if (currentPage < totalPages) { currentPage++; renderPage(currentPage) }
-          })
-
-          const input = nav.querySelector('.shuoshuo-page-input')
-
-          input.addEventListener('focus', e => { e.target.placeholder = '' })
-          input.addEventListener('blur', e => {
-            if (!e.target.value.trim()) e.target.placeholder = currentPage
-          })
-
-          input.addEventListener('input', e => {
-            const value = parseInt(e.target.value) || 0
-            let wasInvalid = false
-
-            if (value > totalPages) { e.target.value = totalPages; wasInvalid = true }
-            else if (value < 1 && e.target.value !== '') { e.target.value = 1; wasInvalid = true }
-
-            if (wasInvalid) {
-              e.target.classList.add('invalid')
-              setTimeout(() => e.target.classList.remove('invalid'), 500)
-            }
-          })
-
-          input.addEventListener('keydown', e => {
-            const value = e.target.value + e.key
-
-            if (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete' ||
-                e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
-                e.key === 'Tab' || e.ctrlKey || e.metaKey) {
-              if (e.key === 'Enter') {
-                const inputValue = e.target.value.trim()
-                const inputPage = inputValue === '' ? currentPage : parseInt(inputValue)
-                if (inputPage >= 1 && inputPage <= totalPages && inputPage !== currentPage) {
-                  currentPage = inputPage
-                  renderPage(currentPage)
-                } else if (inputValue === '') {
-                  renderPage(currentPage)
-                }
-              }
-              return
-            }
-
-            if (!/^\d$/.test(e.key)) {
-              e.preventDefault()
-              return
-            }
-
-            const newValue = parseInt(value) || 0
-            if (newValue > totalPages || (value.length > 1 && newValue === 0)) {
-              e.preventDefault()
-              e.target.classList.add('invalid')
-              setTimeout(() => e.target.classList.remove('invalid'), 500)
-            }
-          })
-        }
-
-        const renderNavigation = () => {
-          const container = document.getElementById('article-container')
-          let nav = container.nextElementSibling
-          const pageInfoTemplate = '#{__('pagination.page_info')}'
-          const pageInfoText = pageInfoTemplate
-            .replace(/\$\{current}/g, currentPage)
-            .replace(/\$\{total}/g, totalPages)
-
-          if (!nav || !nav.classList.contains('shuoshuo-navigation')) {
-            nav = document.createElement('div')
-            nav.className = 'shuoshuo-navigation'
-            nav.innerHTML = `
-              <button class="shuoshuo-prev-btn"><i class="fa-solid fa-chevron-left"></i></button>
-              <span class="shuoshuo-page-info"></span>
-              <input type="number" class="shuoshuo-page-input" min="1">
-              <button class="shuoshuo-next-btn"><i class="fa-solid fa-chevron-right"></i></button>
-            `
-            container.insertAdjacentElement('afterend', nav)
-            setupNavEvents(nav)
-          }
-
-          nav.querySelector('.shuoshuo-page-info').textContent = pageInfoText
-          nav.querySelector('.shuoshuo-prev-btn').disabled = currentPage === 1
-          nav.querySelector('.shuoshuo-next-btn').disabled = currentPage === totalPages
-          const input = nav.querySelector('.shuoshuo-page-input')
-          input.max = totalPages
-          input.placeholder = currentPage
-        }
-
-        const renderPage = (page) => {
-          const start = (page - 1) * itemsPerPage
-          const end = start + itemsPerPage
-          const pageData = data.slice(start, end)
-          renderData(pageData)
-          renderNavigation()
-        }
-
-        const loadShuoshuo = async () => {
-          const container = document.getElementById('article-container')
-          try {
-            let originData = []
-            if (!{Boolean(page.shuoshuo_url)}) {
-              container.innerHTML = '<div class="shuoshuo-loading"><i class="fa-solid fa-circle-notch fa-spin"></i></div>'
-              const response = await fetch('!{url_for(page.shuoshuo_url)}')
-              if (!response.ok) throw new Error(`HTTP ${response.status}`)
-              originData = await response.json()
-            } else {
-              const dataElement = document.getElementById('shuoshuo-data')
-              originData = dataElement ? JSON.parse(dataElement.textContent) : []
-            }
-
-            data = filterDataByLimit(sortDataByDate(originData), limitConfig)
-            totalPages = Math.ceil(data.length / itemsPerPage)
-
-            if (data.length === 0) {
-              container.innerHTML = '<div class="shuoshuo-empty"></div>'
-              return
-            }
-
-            renderPage(currentPage)
-          } catch (error) {
-            console.error(error)
-            container.innerHTML = '<div class="shuoshuo-error"><i class="fa-solid fa-circle-exclamation"></i></div>'
-          }
-        }
-
-        const pjaxCleanup = () => {
-          const container = document.getElementById('article-container')
-          if (container) {
-            const nav = container.nextElementSibling
-            if (nav && nav.classList.contains('shuoshuo-navigation')) nav.remove()
-          }
-          document.removeEventListener('pjax:send', pjaxCleanup)
-        }
-
-        if (window.pjax) {
-          document.addEventListener('pjax:send', pjaxCleanup)
-          loadShuoshuo()
-        } else {
-          window.addEventListener('load', loadShuoshuo)
-        }
-      })()
