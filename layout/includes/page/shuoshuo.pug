@@ -12,7 +12,8 @@
       span.signature-text= theme.aside && theme.aside.card_author && theme.aside.card_author.description || config.description || '自在摇曳，生生不息。'
 
   #article-container
-    if page.shuoshuo_url || (site.data.shuoshuo && site.data.shuoshuo.length)
+    //- Empty arrays are valid data sources too; the client renderer owns the empty state.
+    if page.shuoshuo_url || site.data.shuoshuo
       if page.comments !== false && theme.comments.use
         - commentsJsLoad = true
 
