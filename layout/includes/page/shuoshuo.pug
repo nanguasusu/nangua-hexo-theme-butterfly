@@ -51,12 +51,7 @@
               } else {
                 ele.classList.add('no-comment')
                 ele.innerHTML = ''
-                if (interactiveZone) {
-                  const likesWrap = interactiveZone.querySelector('.moments-likes-row')
-                  if (!likesWrap || !likesWrap.classList.contains('is-active')) {
-                    interactiveZone.classList.remove('has-content')
-                  }
-                }
+                if (interactiveZone) interactiveZone.classList.remove('has-content')
               }
             }
           })()
@@ -72,7 +67,11 @@
 
           const escapeHtml = str => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
-          const sortDataByDate = data => data.sort((a, b) => new Date(b.date) - new Date(a.date))
+          const sortDataByDate = data => data.sort((a, b) => {
+            const pin = Number(b.top === true) - Number(a.top === true)
+            if (pin) return pin
+            return new Date(b.date) - new Date(a.date)
+          })
 
           const filterDataByLimit = (data, limit) => {
             if (!limit || !limit.type) return data
@@ -144,11 +143,23 @@
             return { html: root.innerHTML.trim(), photos }
           }
 
+          const thumbnailUrl = (src, width) => {
+            try {
+              const url = new URL(src, location.origin)
+              if (url.protocol !== 'http:' && url.protocol !== 'https:') return src
+              if (!url.searchParams.has('width')) url.searchParams.set('width', String(width))
+              return url.toString()
+            } catch {
+              return src
+            }
+          }
+
           const renderPhotos = photos => {
             if (!photos.length) return ''
+            const thumbWidth = photos.length === 1 ? 640 : 300
             const cells = photos.map(src => `
               <button type="button" class="moments-photo-item" data-src="${escapeHtml(src)}">
-                <img class="no-lightbox" src="${escapeHtml(src)}" alt="" loading="lazy">
+                <img class="no-lightbox" src="${escapeHtml(thumbnailUrl(src, thumbWidth))}" alt="" loading="lazy">
               </button>`).join('')
             return `<div class="moments-photos count-${photos.length}">${cells}</div>`
           }
@@ -223,6 +234,10 @@
           }
 
           previewRoot.addEventListener('click', event => {
+            if (swipeMoved) {
+              swipeMoved = false
+              return
+            }
             if (event.target.closest('.moments-preview-close')) {
               closePreview()
               return
@@ -245,55 +260,76 @@
             else if (event.key === 'ArrowRight') stepPreview(1)
           })
 
-          const likeStorageKey = 'nangua-shuoshuo-likes'
+          let swipeStartX = 0
+          let swipeStartY = 0
+          let swipeTracking = false
+          let swipeMoved = false
 
-          const readLikes = () => {
-            try {
-              const stored = JSON.parse(localStorage.getItem(likeStorageKey) || '[]')
-              return new Set(Array.isArray(stored) ? stored : [])
-            } catch {
-              return new Set()
-            }
+          previewRoot.addEventListener('touchstart', event => {
+            if (previewRoot.hidden || previewUrls.length < 2) return
+            const touch = event.changedTouches[0]
+            swipeStartX = touch.clientX
+            swipeStartY = touch.clientY
+            swipeTracking = true
+            swipeMoved = false
+          }, { passive: true })
+
+          previewRoot.addEventListener('touchend', event => {
+            if (!swipeTracking) return
+            swipeTracking = false
+            const touch = event.changedTouches[0]
+            const deltaX = touch.clientX - swipeStartX
+            const deltaY = touch.clientY - swipeStartY
+            if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY)) return
+            swipeMoved = true
+            stepPreview(deltaX < 0 ? 1 : -1)
+          }, { passive: true })
+
+          previewRoot.addEventListener('touchcancel', () => {
+            swipeTracking = false
+          }, { passive: true })
+
+          const collapseLimit = text => {
+            const style = getComputedStyle(text)
+            const line = parseFloat(style.lineHeight)
+            const fontSize = parseFloat(style.fontSize) || 16
+            return (Number.isFinite(line) ? line : fontSize * 1.65) * 6
           }
 
-          const paintLikes = () => {
-            const likes = readLikes()
-
-            document.querySelectorAll('.moments-item').forEach(itemEl => {
-              const likeBtn = itemEl.querySelector('.moments-action-like')
-              if (!likeBtn) return
-              const key = likeBtn.dataset.key
-              const active = likes.has(key)
-              likeBtn.classList.toggle('is-active', active)
-              likeBtn.setAttribute('aria-pressed', active ? 'true' : 'false')
-              const icon = likeBtn.querySelector('i')
-              if (icon) icon.className = active ? 'fa-solid fa-heart' : 'fa-regular fa-heart'
-              const textSpan = likeBtn.querySelector('.action-label')
-              if (textSpan) textSpan.textContent = active ? '取消' : '赞'
-
-              const interactiveZone = itemEl.querySelector('.moments-interactive-box')
-              const likesWrap = itemEl.querySelector('.moments-likes-row')
-              const commentEl = itemEl.querySelector('.moments-comment-box')
-              const hasOpenComment = commentEl && !commentEl.classList.contains('no-comment')
-
-              if (likesWrap) {
-                likesWrap.classList.toggle('is-active', active)
-              }
-              if (interactiveZone) {
-                interactiveZone.classList.toggle('has-content', active || Boolean(hasOpenComment))
-              }
+          const prepareFolds = () => {
+            document.querySelectorAll('.moments-text').forEach(text => {
+              const limit = collapseLimit(text)
+              if (text.scrollHeight <= limit + 2) return
+              text.classList.add('is-collapsed')
+              text.style.maxHeight = `${limit}px`
+              requestAnimationFrame(() => text.classList.add('can-fold'))
+              const button = document.createElement('button')
+              button.type = 'button'
+              button.className = 'moments-fold'
+              button.innerHTML = '<span class="moments-fold-label">展开全文</span><svg class="moments-line-icon moments-fold-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'
+              text.insertAdjacentElement('afterend', button)
             })
           }
 
           document.getElementById('article-container').addEventListener('click', event => {
-            const likeButton = event.target.closest('.moments-action-like')
-            if (likeButton) {
-              const likes = readLikes()
-              const key = likeButton.dataset.key
-              if (likes.has(key)) likes.delete(key)
-              else likes.add(key)
-              localStorage.setItem(likeStorageKey, JSON.stringify([...likes]))
-              paintLikes()
+            const foldButton = event.target.closest('.moments-fold')
+            if (foldButton) {
+              const text = foldButton.previousElementSibling
+              if (!text || !text.classList.contains('moments-text')) return
+              const collapsed = text.classList.contains('is-collapsed')
+              const label = foldButton.querySelector('.moments-fold-label')
+              if (collapsed) {
+                text.classList.remove('is-collapsed')
+                text.style.maxHeight = `${text.scrollHeight}px`
+                foldButton.classList.add('is-open')
+                if (label) label.textContent = '收起'
+              } else {
+                const limit = collapseLimit(text)
+                text.classList.add('is-collapsed')
+                text.style.maxHeight = `${limit}px`
+                foldButton.classList.remove('is-open')
+                if (label) label.textContent = '展开全文'
+              }
               return
             }
 
@@ -310,15 +346,9 @@
             const content = dataSlice.map((item, index) => {
               const formattedDate = formatToTimeZone(item.date)
               const tags = item.tags && item.tags.map(tag => `<span class="moments-tag">#${escapeHtml(tag)}</span>`).join('') || ''
+              const lineIcon = (paths) => `<svg class="moments-line-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
               const commentButton = item.key && !{commentsJsLoad || false}
-                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论">
-                    <i class="fa-regular fa-comment-dots"></i><span class="action-label">评论</span>
-                  </button>`
-                : ''
-              const likeButton = item.key
-                ? `<button type="button" class="moments-action-btn moments-action-like" data-key="${escapeHtml(item.key)}" aria-pressed="false" aria-label="点赞">
-                    <i class="fa-regular fa-heart"></i><span class="action-label">赞</span>
-                  </button>`
+                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}</button>`
                 : ''
               const commentContainer = item.key
                 ? `<div class="moments-comment-box no-comment" data-key="${escapeHtml(item.key)}"></div>`
@@ -328,9 +358,16 @@
               const photosHtml = renderPhotos(parsed.photos)
               const authorName = item.author ? escapeHtml(item.author) : !{JSON.stringify(config.author || '楠瓜')}
               const avatarImg = item.avatar ? escapeHtml(item.avatar) : !{JSON.stringify(url_for(theme.avatar.img))}
+              const pinHtml = item.top === true ? '<span class="moments-pin">置顶</span>' : ''
+              const locationHtml = item.location
+                ? `<span class="moments-tail">${lineIcon('<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/>')} ${escapeHtml(item.location)}</span>`
+                : ''
+              const deviceHtml = item.device
+                ? `<span class="moments-tail moments-device">${lineIcon('<rect x="8" y="3" width="8" height="18" rx="2"/><path d="M11 18h2"/>')} 来自 ${escapeHtml(item.device)}</span>`
+                : ''
 
               return `
-                <div class="moments-item" data-key="${escapeHtml(item.key || '')}">
+                <div class="moments-item${item.top === true ? ' is-pinned' : ''}" data-key="${escapeHtml(item.key || '')}">
                   <div class="moments-item-avatar">
                     <img class="no-lightbox" src="${avatarImg}" alt="${authorName}">
                   </div>
@@ -342,18 +379,15 @@
                     <div class="moments-item-footer">
                       <div class="moments-meta-info">
                         <time class="moments-date" title="${formattedDate}">${btf.diffDate(formattedDate, true)}</time>
-                        <span class="moments-tail"><i class="fa-solid fa-location-dot"></i> 楠瓜的小窝</span>
+                        ${pinHtml}
+                        ${locationHtml}
+                        ${deviceHtml}
                       </div>
                       <div class="moments-actions">
-                        ${likeButton}
                         ${commentButton}
                       </div>
                     </div>
                     <div class="moments-interactive-box" data-key="${escapeHtml(item.key || '')}">
-                      <div class="moments-likes-row">
-                        <i class="fa-solid fa-heart like-heart-icon"></i>
-                        <span class="moments-like-users"><span class="like-me">你</span> 觉得很赞</span>
-                      </div>
                       ${commentContainer}
                     </div>
                   </div>
@@ -363,7 +397,7 @@
             const container = document.getElementById('article-container')
             container.innerHTML = `<div class="moments-list">${content}</div>`
 
-            paintLikes()
+            prepareFolds()
             document.dispatchEvent(new Event('shuoshuo:rendered'))
           }
 

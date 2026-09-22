@@ -140,8 +140,12 @@ hexo.extend.helper.register('shuoshuoFN', (data, page) => {
   // Check if limit.value is a valid date
   const isValidDate = date => !isNaN(Date.parse(date))
 
-  // order by date
-  processedData.sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+  // Pinned moments stay ahead of newer unpinned ones.
+  processedData.sort((a, b) => {
+    const pin = Number(b.top === true) - Number(a.top === true)
+    if (pin) return pin
+    return Date.parse(b.date) - Date.parse(a.date)
+  })
 
   // Apply number limit or time limit conditionally
   if (limit && limit.type === 'num' && limit.value > 0) {
