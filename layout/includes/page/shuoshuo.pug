@@ -165,6 +165,19 @@
             return `<div class="moments-photos count-${photos.length}">${cells}</div>`
           }
 
+          const classifySinglePhoto = item => {
+            const image = item.querySelector('img')
+            if (!image) return
+            const apply = () => {
+              const ratio = image.naturalWidth / image.naturalHeight
+              if (!Number.isFinite(ratio) || ratio <= 0) return
+              item.classList.remove('is-landscape', 'is-portrait', 'is-normal')
+              item.classList.add(ratio > 1.4 ? 'is-landscape' : ratio < 0.8 ? 'is-portrait' : 'is-normal')
+            }
+            if (image.complete && image.naturalWidth) apply()
+            else image.addEventListener('load', apply, { once: true })
+          }
+
           const previewRoot = document.createElement('div')
           previewRoot.className = 'moments-preview'
           previewRoot.hidden = true
@@ -399,6 +412,7 @@
             container.innerHTML = `<div class="moments-list">${content}</div>`
 
             prepareFolds()
+            container.querySelectorAll('.moments-photos.count-1 .moments-photo-item').forEach(classifySinglePhoto)
             document.dispatchEvent(new Event('shuoshuo:rendered'))
           }
 
