@@ -20,6 +20,13 @@
         script.
           (() => {
             const commentDiv = `!{partial('includes/third-party/comments/index', {}, {cache: true})}`
+            const commentRepo = !{JSON.stringify(theme.utterances && theme.utterances.repo || '')}
+            const githubHeaders = { Accept: 'application/vnd.github+json' }
+            let issueIndexTask = null
+
+            const escapeHtml = str => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+            const cssEscape = value => window.CSS && CSS.escape ? CSS.escape(value) : String(value).replace(/"/g, '\\"')
+            const issueTerm = key => `${location.pathname.replace(/\/$/, '')}?key=${key}`
 
             const runDestroy = (shuoshuoComment) => {
               if (!shuoshuoComment) return
@@ -29,6 +36,83 @@
               }
             }
 
+            const plainComment = body => String(body || '')
+              .replace(/!\[[^\]]*]\([^)]*\)/g, '')
+              .replace(/\[([^\]]*)]\([^)]*\)/g, '$1')
+              .replace(/```[\s\S]*?```/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+
+            const loadIssueIndex = () => {
+              if (issueIndexTask) return issueIndexTask
+              issueIndexTask = (async () => {
+                const index = new Map()
+                if (!commentRepo) return index
+                const phrase = `${location.pathname.replace(/\/$/, '')}?key=`
+                const q = `repo:${commentRepo} is:issue "${phrase}" in:title`
+                const response = await fetch(`https://api.github.com/search/issues?per_page=100&q=${encodeURIComponent(q)}`, { headers: githubHeaders })
+                if (!response.ok) throw new Error(`GitHub search ${response.status}`)
+                const data = await response.json()
+                for (const issue of data.items || []) index.set(issue.title, issue)
+                return index
+              })().catch(error => {
+                issueIndexTask = null
+                throw error
+              })
+              return issueIndexTask
+            }
+
+            const renderCommentList = (item, comments) => {
+              const bubble = item.querySelector('.moments-interactive-box')
+              const list = item.querySelector('.moments-comment-list')
+              if (!bubble || !list) return
+              if (!comments.length) {
+                list.replaceChildren()
+                list.hidden = true
+                bubble.classList.remove('has-content')
+                return
+              }
+              list.innerHTML = comments.map(comment => `<p class="moments-comment-line"><span class="moments-comment-name">${escapeHtml(comment.user)}</span>：${escapeHtml(comment.text)}</p>`).join('')
+              list.hidden = false
+              bubble.classList.add('has-content')
+            }
+
+            const loadComments = async key => {
+              const index = await loadIssueIndex()
+              const issue = index.get(issueTerm(key))
+              if (!issue || !issue.comments) return []
+              const response = await fetch(`https://api.github.com/repos/${commentRepo}/issues/${issue.number}/comments?per_page=100`, { headers: githubHeaders })
+              if (!response.ok) throw new Error(`GitHub comments ${response.status}`)
+              const data = await response.json()
+              return data.flatMap(comment => {
+                const text = plainComment(comment.body)
+                if (!text) return []
+                return [{ user: comment.user && comment.user.login || '访客', text }]
+              })
+            }
+
+            const paintComments = async (key, refresh = false) => {
+              if (refresh) issueIndexTask = null
+              const box = document.querySelector(`.moments-comment-box[data-key="${cssEscape(key)}"]`)
+              const item = box && box.closest('.moments-item')
+              if (!item) return
+              try {
+                const comments = await loadComments(key)
+                if (item.isConnected) renderCommentList(item, comments)
+              } catch (error) {
+                console.error(error)
+              }
+            }
+
+            window.refreshShuoshuoComment = key => paintComments(key, true)
+
+            document.addEventListener('shuoshuo:rendered', () => {
+              issueIndexTask = null
+              document.querySelectorAll('.moments-comment-box[data-key]').forEach(box => {
+                paintComments(box.getAttribute('data-key'))
+              })
+            })
+
             window.addCommentToShuoshuo = e => {
               const btn = e.target.closest('.moments-action-comment')
               if (!btn) return
@@ -36,23 +120,31 @@
               const item = btn.closest('.moments-item')
               if (!item) return
               const ele = item.querySelector('.moments-comment-box')
-              const interactiveZone = item.querySelector('.moments-interactive-box')
               if (!ele) return
 
               const { shuoshuoComment } = window
-              const isInclude = ele.classList.contains('no-comment')
+              const opening = ele.classList.contains('no-comment')
+              const previous = document.querySelector('.moments-comment-box:not(.no-comment)')
+              const previousKey = previous && previous.getAttribute('data-key')
               runDestroy(shuoshuoComment)
-              if (isInclude) {
+              document.querySelectorAll('.moments-action-comment[aria-expanded="true"]').forEach(button => {
+                button.setAttribute('aria-expanded', 'false')
+              })
+
+              if (opening) {
                 ele.classList.remove('no-comment')
-                if (interactiveZone) interactiveZone.classList.add('has-content')
                 ele.innerHTML = commentDiv
-                const key = `${location.pathname.replace(/\/$/, '')}?key=${ele.getAttribute('data-key')}`
+                const key = issueTerm(ele.getAttribute('data-key'))
                 btf.switchComments(ele, key)
                 shuoshuoComment && shuoshuoComment.loadComment && shuoshuoComment.loadComment(ele, key)
+                btn.setAttribute('aria-expanded', 'true')
+                if (previousKey && previousKey !== ele.getAttribute('data-key')) {
+                  window.refreshShuoshuoComment(previousKey)
+                }
               } else {
                 ele.classList.add('no-comment')
                 ele.innerHTML = ''
-                if (interactiveZone) interactiveZone.classList.remove('has-content')
+                window.refreshShuoshuoComment(ele.getAttribute('data-key'))
               }
             }
           })()
@@ -362,10 +454,10 @@
               const tags = item.tags && item.tags.map(tag => `<span class="moments-tag">#${escapeHtml(tag)}</span>`).join('') || ''
               const lineIcon = (paths) => `<svg class="moments-line-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
               const commentButton = item.key && !{commentsJsLoad || false}
-                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}</button>`
+                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论" aria-expanded="false">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}</button>`
                 : ''
-              const commentContainer = item.key
-                ? `<div class="moments-comment-box no-comment" data-key="${escapeHtml(item.key)}"></div>`
+              const commentThread = item.key
+                ? `<div class="moments-thread"><div class="moments-interactive-box"><div class="moments-comment-list" hidden></div></div><div class="moments-comment-box no-comment" data-key="${escapeHtml(item.key)}"></div></div>`
                 : ''
               const parsed = extractShuoshuoPhotos(item, item.content || '')
               const contentHtml = parsed.html ? `<div class="moments-text">${parsed.html}</div>` : ''
@@ -401,9 +493,7 @@
                         ${commentButton}
                       </div>
                     </div>
-                    <div class="moments-interactive-box" data-key="${escapeHtml(item.key || '')}">
-                      ${commentContainer}
-                    </div>
+                    ${commentThread}
                   </div>
                 </div>`
             }).join('')
