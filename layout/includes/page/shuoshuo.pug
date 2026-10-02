@@ -12,16 +12,20 @@
       span.signature-text= theme.aside && theme.aside.card_author && theme.aside.card_author.description || config.description || '自在摇曳，生生不息。'
 
   #shuoshuo-filters.moments-filters(hidden aria-label='筛选说说')
-    label.moments-filter-field
-      select.moments-month-select(aria-label='按月份筛选')
-        option(value='') 全部时间
-      svg(viewBox='0 0 24 24' aria-hidden='true')
-        path(d='m8 10 4 4 4-4')
-    label.moments-filter-field
-      select.moments-tag-select(aria-label='按标签筛选')
-        option(value='') 全部标签
-      svg(viewBox='0 0 24 24' aria-hidden='true')
-        path(d='m8 10 4 4 4-4')
+    .moments-filter-field
+      button.moments-time-trigger(type='button' aria-expanded='false' aria-controls='moments-time-panel')
+        svg(viewBox='0 0 24 24' aria-hidden='true')
+          path(d='M8 3v4m8-4v4M4 10h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1z')
+        span.moments-time-label 全部时间
+        svg.moments-filter-chevron(viewBox='0 0 24 24' aria-hidden='true')
+          path(d='m8 10 4 4 4-4')
+      #moments-time-panel.moments-filter-panel(hidden role='dialog' aria-label='按时间筛选说说')
+    .moments-filter-field
+      button.moments-tag-trigger(type='button' aria-expanded='false' aria-controls='moments-tag-panel')
+        span.moments-tag-label 全部标签
+        svg.moments-filter-chevron(viewBox='0 0 24 24' aria-hidden='true')
+          path(d='m8 10 4 4 4-4')
+      #moments-tag-panel.moments-filter-panel.moments-tags-panel(hidden role='dialog' aria-label='按标签筛选说说')
     button.moments-filter-reset(type='button' hidden) 清除筛选
     span.moments-filter-count(role='status' aria-live='polite')
 
@@ -215,20 +219,75 @@
           let selectedMonth = ''
           let selectedTag = ''
           const filterRoot = document.getElementById('shuoshuo-filters')
-          const monthSelect = filterRoot.querySelector('.moments-month-select')
-          const tagSelect = filterRoot.querySelector('.moments-tag-select')
+          const timeTrigger = filterRoot.querySelector('.moments-time-trigger')
+          const tagTrigger = filterRoot.querySelector('.moments-tag-trigger')
+          const timePanel = filterRoot.querySelector('#moments-time-panel')
+          const tagPanel = filterRoot.querySelector('#moments-tag-panel')
           const resetFiltersButton = filterRoot.querySelector('.moments-filter-reset')
           const maxPhotos = 9
+          let months = []
+          let years = []
+          let tags = []
+          let archiveYear = ''
+          let yearPage = 0
+          let showingYears = false
+          let openFilter = ''
+          const yearsPerPage = 12
+
+          const closeFilter = (restoreFocus = false) => {
+            const trigger = openFilter === 'time' ? timeTrigger : tagTrigger
+            openFilter = ''
+            timePanel.hidden = true
+            tagPanel.hidden = true
+            timeTrigger.setAttribute('aria-expanded', 'false')
+            tagTrigger.setAttribute('aria-expanded', 'false')
+            if (restoreFocus) trigger.focus({ preventScroll: true })
+          }
+
+          const renderTimePanel = () => {
+            const index = years.indexOf(archiveYear)
+            const pageYears = years.slice(yearPage * yearsPerPage, (yearPage + 1) * yearsPerPage)
+            const previousDisabled = showingYears ? yearPage === 0 : index === 0
+            const nextDisabled = showingYears ? (yearPage + 1) * yearsPerPage >= years.length : index === years.length - 1
+            const heading = showingYears ? `${pageYears.at(-1)} — ${pageYears[0]}` : `${archiveYear} 年`
+            const choices = showingYears
+              ? pageYears.map(year => `<button type="button" data-year="${year}" aria-pressed="${year === archiveYear}">${year}</button>`).join('')
+              : Array.from({ length: 12 }, (_, index) => {
+                const number = index + 1
+                const month = `${archiveYear}-${String(number).padStart(2, '0')}`
+                return `<button type="button" data-month="${month}" aria-pressed="${month === selectedMonth}"${months.includes(month) ? '' : ' disabled'}>${number} 月</button>`
+              }).join('')
+            timePanel.innerHTML = `<div class="moments-archive-heading"><button type="button" data-archive-step="-1" aria-label="${showingYears ? '较新的一组年份' : '较新年份'}"${previousDisabled ? ' disabled' : ''}>‹</button><button type="button" class="moments-archive-year" data-archive-years aria-label="${showingYears ? '返回月份' : '选择年份'}" aria-expanded="${showingYears}">${heading}<span aria-hidden="true">⌄</span></button><button type="button" data-archive-step="1" aria-label="${showingYears ? '较早的一组年份' : '较早年份'}"${nextDisabled ? ' disabled' : ''}>›</button></div><div class="moments-archive-grid" aria-label="${showingYears ? '年份' : '月份'}">${choices}</div><button type="button" class="moments-archive-all" data-month="" aria-pressed="${!selectedMonth}">全部时间</button>`
+          }
+
+          const renderTagPanel = () => {
+            tagPanel.innerHTML = ['', ...tags].map(tag => `<button type="button" data-filter-tag="${escapeHtml(tag)}" aria-pressed="${tag === selectedTag}">${tag ? '#' + escapeHtml(tag) : '全部标签'}</button>`).join('')
+          }
+
+          const toggleFilter = name => {
+            if (openFilter === name) {
+              closeFilter()
+              return
+            }
+            closeFilter()
+            openFilter = name
+            if (name === 'time') {
+              archiveYear = selectedMonth ? selectedMonth.slice(0, 4) : years[0]
+              yearPage = Math.floor(years.indexOf(archiveYear) / yearsPerPage)
+              showingYears = false
+              renderTimePanel()
+            } else renderTagPanel()
+            const panel = name === 'time' ? timePanel : tagPanel
+            const trigger = name === 'time' ? timeTrigger : tagTrigger
+            panel.hidden = false
+            trigger.setAttribute('aria-expanded', 'true')
+          }
 
           const setupFilters = () => {
-            const months = [...new Set(allData.map(item => item.month))].sort().reverse()
-            const tags = [...new Set(allData.flatMap(item => item.tags))].sort((left, right) => left.localeCompare(right, 'zh-CN'))
-            monthSelect.innerHTML = '<option value="">全部时间</option>' + months.map(month => {
-              const [year, number] = month.split('-')
-              return `<option value="${month}">${year} 年 ${Number(number)} 月</option>`
-            }).join('')
-            tagSelect.innerHTML = '<option value="">全部标签</option>' + tags.map(tag => `<option value="${escapeHtml(tag)}">#${escapeHtml(tag)}</option>`).join('')
-            tagSelect.disabled = tags.length === 0
+            months = [...new Set(allData.map(item => item.month))].sort().reverse()
+            years = [...new Set(months.map(month => month.slice(0, 4)))]
+            tags = [...new Set(allData.flatMap(item => item.tags))].sort((left, right) => left.localeCompare(right, 'zh-CN'))
+            tagTrigger.disabled = tags.length === 0
             filterRoot.hidden = allData.length === 0
           }
 
@@ -236,32 +295,74 @@
             data = allData.filter(item => (!selectedMonth || item.month === selectedMonth) && (!selectedTag || item.tags.includes(selectedTag)))
             currentPage = 1
             totalPages = Math.ceil(data.length / itemsPerPage)
-            monthSelect.value = selectedMonth
-            tagSelect.value = selectedTag
-            monthSelect.classList.toggle('is-active', Boolean(selectedMonth))
-            tagSelect.classList.toggle('is-active', Boolean(selectedTag))
+            const [year, month] = selectedMonth.split('-')
+            filterRoot.querySelector('.moments-time-label').textContent = selectedMonth ? `${year} 年 ${Number(month)} 月` : '全部时间'
+            filterRoot.querySelector('.moments-tag-label').textContent = selectedTag ? `#${selectedTag}` : '全部标签'
+            timeTrigger.classList.toggle('is-active', Boolean(selectedMonth))
+            tagTrigger.classList.toggle('is-active', Boolean(selectedTag))
             resetFiltersButton.hidden = !selectedMonth && !selectedTag
             filterRoot.querySelector('.moments-filter-count').textContent = `共 ${data.length} 条`
             renderPage(currentPage)
           }
 
           const clearFilters = () => {
+            closeFilter()
             selectedMonth = ''
             selectedTag = ''
             applyFilters()
           }
 
-          monthSelect.addEventListener('change', () => {
-            selectedMonth = monthSelect.value
+          timeTrigger.addEventListener('click', () => toggleFilter('time'))
+          tagTrigger.addEventListener('click', () => toggleFilter('tags'))
+          timePanel.addEventListener('click', event => {
+            const button = event.target.closest('button')
+            if (!button || button.disabled) return
+            if (button.hasAttribute('data-month')) {
+              selectedMonth = button.dataset.month
+              closeFilter(true)
+              applyFilters()
+              return
+            }
+            if (button.hasAttribute('data-year')) {
+              archiveYear = button.dataset.year
+              showingYears = false
+            } else if (button.hasAttribute('data-archive-years')) {
+              showingYears = !showingYears
+              yearPage = Math.floor(years.indexOf(archiveYear) / yearsPerPage)
+            } else if (button.hasAttribute('data-archive-step')) {
+              const step = Number(button.dataset.archiveStep)
+              if (showingYears) yearPage += step
+              else archiveYear = years[years.indexOf(archiveYear) + step]
+            }
+            const focusSelector = button.hasAttribute('data-archive-step') ? `[data-archive-step="${button.dataset.archiveStep}"]:not(:disabled)` : '[data-archive-years]'
+            renderTimePanel()
+            const focusTarget = timePanel.querySelector(focusSelector) || timePanel.querySelector('[data-archive-years]')
+            focusTarget.focus({ preventScroll: true })
+          })
+          tagPanel.addEventListener('click', event => {
+            const button = event.target.closest('[data-filter-tag]')
+            if (!button) return
+            selectedTag = button.dataset.filterTag
+            closeFilter(true)
             applyFilters()
           })
-          tagSelect.addEventListener('change', () => {
-            selectedTag = tagSelect.value
-            applyFilters()
+          const dismissFilterOutside = event => {
+            if (openFilter && !event.composedPath().includes(filterRoot)) closeFilter()
+          }
+          document.addEventListener('click', dismissFilterOutside)
+          filterRoot.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && openFilter) {
+              event.preventDefault()
+              closeFilter(true)
+            }
+          })
+          filterRoot.addEventListener('focusout', event => {
+            // 切换网格会移除当前按钮，此时浏览器没有新的焦点目标。
+            if (openFilter && event.relatedTarget && !filterRoot.contains(event.relatedTarget)) closeFilter()
           })
           resetFiltersButton.addEventListener('click', () => {
             clearFilters()
-            monthSelect.focus({ preventScroll: true })
+            timeTrigger.focus({ preventScroll: true })
           })
 
           const extractShuoshuoPhotos = (item, html) => {
@@ -485,14 +586,15 @@
           document.getElementById('article-container').addEventListener('click', event => {
             if (event.target.closest('[data-action="clear-shuoshuo-filters"]')) {
               clearFilters()
-              monthSelect.focus({ preventScroll: true })
+              timeTrigger.focus({ preventScroll: true })
               return
             }
             const tagButton = event.target.closest('.moments-tag')
             if (tagButton) {
               selectedTag = tagButton.dataset.tag
+              closeFilter()
               applyFilters()
-              tagSelect.focus({ preventScroll: true })
+              tagTrigger.focus({ preventScroll: true })
               btf.scrollToDest(btf.getEleTop(filterRoot), 300)
               return
             }
@@ -707,6 +809,7 @@
           }
 
           const pjaxCleanup = () => {
+            document.removeEventListener('click', dismissFilterOutside)
             closePreview()
             previewRoot.remove()
             const container = document.getElementById('article-container')

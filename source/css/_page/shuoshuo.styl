@@ -41,50 +41,22 @@
 
 /* 月份与标签筛选 */
 .moments-filters
+  position: relative
+  z-index: 3
   display: flex
   flex-wrap: wrap
   align-items: center
   gap: 8px
   margin: 4px 0 20px
 
+  [hidden],
   &[hidden]
-    display: none
+    display: none !important
 
-  .moments-filter-field
-    position: relative
-    display: inline-flex
-    align-items: center
-    margin: 0
-
-    svg
-      position: absolute
-      right: 10px
-      width: 14px
-      height: 14px
-      fill: none
-      stroke: var(--shuoshuo-primary)
-      stroke-width: 1.6
-      stroke-linecap: round
-      stroke-linejoin: round
-      pointer-events: none
-
-  select
-    max-width: 190px
-    height: 34px
-    padding: 0 30px 0 13px
-    border: 1px solid rgba(113, 135, 168, .1)
-    border-radius: 20px
-    background: rgba(255, 255, 255, .72)
-    color: var(--shuoshuo-primary)
-    font-size: 12px
+  button
+    border: 0
     cursor: pointer
-    appearance: none
-    transition: background .2s, border-color .2s
-
-    &:hover,
-    &.is-active
-      border-color: rgba(113, 135, 168, .2)
-      background: var(--shuoshuo-primary-soft)
+    font: inherit
 
     &:focus-visible
       outline: 2px solid var(--shuoshuo-primary)
@@ -93,29 +65,133 @@
     &:disabled
       color: var(--shuoshuo-muted)
       cursor: default
+      opacity: .45
 
-    option
-      background: var(--card-bg)
-      color: var(--shuoshuo-text)
+  .moments-filter-field
+    display: inline-flex
+    align-items: center
+
+  .moments-time-trigger,
+  .moments-tag-trigger
+    display: inline-flex
+    align-items: center
+    gap: 7px
+    min-height: 36px
+    max-width: 230px
+    padding: 7px 12px
+    border-radius: 12px
+    background: rgba(255, 255, 255, .82)
+    color: var(--shuoshuo-primary)
+    font-size: 12px
+    transition: background .2s
+
+    > span
+      overflow: hidden
+      text-overflow: ellipsis
+      white-space: nowrap
+
+    &:hover,
+    &.is-active,
+    &[aria-expanded='true']
+      background: var(--shuoshuo-primary-soft)
+
+    svg
+      flex-shrink: 0
+      width: 15px
+      height: 15px
+      fill: none
+      stroke: currentColor
+      stroke-width: 1.6
+      stroke-linecap: round
+      stroke-linejoin: round
+
+    .moments-filter-chevron
+      width: 12px
+      transition: transform .2s
+
+    &[aria-expanded='true'] .moments-filter-chevron
+      transform: rotate(180deg)
+
+  .moments-filter-panel
+    position: absolute
+    top: calc(100% + 10px)
+    left: 0
+    width: 292px
+    max-width: 100%
+    box-sizing: border-box
+    padding: 14px
+    border: 1px solid rgba(113, 135, 168, .12)
+    border-radius: 18px
+    background: #fff
+    color: var(--shuoshuo-text)
+    box-shadow: 0 12px 36px rgba(45, 59, 78, .12)
+
+    button
+      min-height: 38px
+      padding: 6px 8px
+      border-radius: 10px
+      background: transparent
+      color: inherit
+      font-size: 13px
+
+      &:hover:not(:disabled),
+      &[aria-pressed='true']
+        background: var(--shuoshuo-primary-soft)
+        color: var(--shuoshuo-primary)
+
+  .moments-archive-heading
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 10px
+
+    .moments-archive-year
+      font-weight: 500
+
+      span
+        margin-left: 8px
+        color: var(--shuoshuo-muted)
+
+  .moments-archive-grid
+    display: grid
+    grid-template-columns: repeat(4, minmax(0, 1fr))
+    gap: 5px
+
+  .moments-archive-all
+    margin-top: 10px
+
+  .moments-tags-panel
+    display: flex
+    flex-wrap: wrap
+    gap: 6px
+    width: 320px
+    max-height: 280px
+    overflow-y: auto
+
+    button
+      max-width: 100%
+      overflow-wrap: anywhere
 
   .moments-filter-reset
     padding: 4px 6px
-    border: 0
     background: transparent
     color: var(--shuoshuo-muted)
     font-size: 12px
-    cursor: pointer
 
     &:hover
       color: var(--shuoshuo-primary)
-
-    &[hidden]
-      display: none
 
   .moments-filter-count
     margin-left: auto
     color: var(--shuoshuo-muted)
     font-size: 12px
+
+@media screen and (max-width: 480px)
+  .moments-filters
+    .moments-time-trigger,
+    .moments-tag-trigger,
+    .moments-filter-panel button
+      min-height: 44px
 
 .moments-empty-reset
   padding: 6px 14px
@@ -886,10 +962,16 @@ body.moments-preview-open
       box-shadow: none
 
   .moments-filters
-    select
-      border-color: rgba(142, 164, 196, .12)
-      background: rgba(26, 29, 35, .72)
+    .moments-time-trigger,
+    .moments-tag-trigger
+      background: rgba(26, 29, 35, .82)
 
       &.is-active,
-      &:hover
+      &:hover,
+      &[aria-expanded='true']
         background: var(--shuoshuo-primary-soft)
+
+    .moments-filter-panel
+      border-color: rgba(142, 164, 196, .14)
+      background: #20232b
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .25)
