@@ -39,6 +39,93 @@
 .shuoshuo-moments-wrap
   background: transparent
 
+/* 月份与标签筛选 */
+.moments-filters
+  display: flex
+  flex-wrap: wrap
+  align-items: center
+  gap: 8px
+  margin: 4px 0 20px
+
+  &[hidden]
+    display: none
+
+  .moments-filter-field
+    position: relative
+    display: inline-flex
+    align-items: center
+    margin: 0
+
+    svg
+      position: absolute
+      right: 10px
+      width: 14px
+      height: 14px
+      fill: none
+      stroke: var(--shuoshuo-primary)
+      stroke-width: 1.6
+      stroke-linecap: round
+      stroke-linejoin: round
+      pointer-events: none
+
+  select
+    max-width: 190px
+    height: 34px
+    padding: 0 30px 0 13px
+    border: 1px solid rgba(113, 135, 168, .1)
+    border-radius: 20px
+    background: rgba(255, 255, 255, .72)
+    color: var(--shuoshuo-primary)
+    font-size: 12px
+    cursor: pointer
+    appearance: none
+    transition: background .2s, border-color .2s
+
+    &:hover,
+    &.is-active
+      border-color: rgba(113, 135, 168, .2)
+      background: var(--shuoshuo-primary-soft)
+
+    &:focus-visible
+      outline: 2px solid var(--shuoshuo-primary)
+      outline-offset: 2px
+
+    &:disabled
+      color: var(--shuoshuo-muted)
+      cursor: default
+
+    option
+      background: var(--card-bg)
+      color: var(--shuoshuo-text)
+
+  .moments-filter-reset
+    padding: 4px 6px
+    border: 0
+    background: transparent
+    color: var(--shuoshuo-muted)
+    font-size: 12px
+    cursor: pointer
+
+    &:hover
+      color: var(--shuoshuo-primary)
+
+    &[hidden]
+      display: none
+
+  .moments-filter-count
+    margin-left: auto
+    color: var(--shuoshuo-muted)
+    font-size: 12px
+
+.moments-empty-reset
+  padding: 6px 14px
+  border: 0
+  border-radius: 20px
+  background: var(--shuoshuo-primary-soft)
+  color: var(--shuoshuo-primary)
+  font-size: 12px
+  cursor: pointer
+
 /* 朋友圈顶部封面 */
 .moments-header
   margin-bottom: 22px
@@ -355,9 +442,21 @@
     margin: 6px 0
 
   .moments-tag
+    padding: 2px 7px
+    border: 0
+    border-radius: 12px
+    background: transparent
     color: var(--shuoshuo-primary)
     font-size: .8rem
-    cursor: default
+    cursor: pointer
+
+    &:hover,
+    &[aria-pressed='true']
+      background: var(--shuoshuo-primary-soft)
+
+    &:focus-visible
+      outline: 2px solid var(--shuoshuo-primary)
+      outline-offset: 2px
 
   .moments-item-footer
     display: flex
@@ -492,56 +591,127 @@
 /* 分页 */
 .shuoshuo-navigation
   display: flex
-  justify-content: center
+  flex-direction: column
   align-items: center
-  gap: 8px
-  margin-top: 24px
-  padding: 16px 0
+  gap: 14px
+  margin-top: 32px
+  padding: 8px 0 4px
+
+  .shuoshuo-page-track
+    display: flex
+    align-items: center
+    gap: 4px
+    padding: 5px
+    border: 1px solid rgba(113, 135, 168, .1)
+    border-radius: 30px
+    background: rgba(255, 255, 255, .72)
+    box-shadow: 0 3px 16px rgba(113, 135, 168, .04)
+    backdrop-filter: blur(12px)
+
+  .shuoshuo-page-numbers
+    display: flex
+    align-items: center
+    gap: 4px
 
   button
-    display: flex
+    display: inline-flex
     justify-content: center
     align-items: center
-    width: 2.6em
-    height: 2.6em
-    border: 1px solid rgba(0, 0, 0, .06)
-    border-radius: 8px
-    background: var(--card-bg, #fff)
-    color: var(--font-color, #555)
-    font-size: .9em
+    flex-shrink: 0
+    width: 34px
+    height: 34px
+    padding: 0
+    border: 0
+    border-radius: 50%
+    background: transparent
+    color: var(--shuoshuo-primary)
+    font-weight: 500
+    font-size: 13px
+    font-variant-numeric: tabular-nums
+    line-height: 1
     cursor: pointer
-    transition: all .2s ease-in-out
+    transition: background .2s, color .2s, box-shadow .2s
 
     &:not(:disabled):hover
-      border-color: #576b95
-      background-color: #576b95
+      background: var(--shuoshuo-primary-soft)
+
+    &:focus-visible
+      outline: 2px solid var(--shuoshuo-primary)
+      outline-offset: 2px
+
+    &[aria-current='page']
+      background: var(--shuoshuo-primary)
       color: #fff
+      box-shadow: 0 3px 8px rgba(113, 135, 168, .18)
 
     &:disabled
-      background: rgba(0, 0, 0, .03)
-      color: #bbb
-      opacity: .6
-      cursor: not-allowed
+      opacity: .28
+      cursor: default
 
-  .shuoshuo-page-info
-    margin: 0 10px
-    color: #888
-    white-space: nowrap
-    font-size: .88em
+    svg
+      width: 16px
+      height: 16px
+      fill: none
+      stroke: currentColor
+      stroke-width: 1.6
+      stroke-linecap: round
+      stroke-linejoin: round
+
+  .shuoshuo-page-ellipsis
+    width: 22px
+    color: var(--shuoshuo-muted)
+    text-align: center
+    font-size: 12px
+
+  .shuoshuo-page-jump
+    display: flex
+    align-items: center
+    gap: 10px
+    color: var(--shuoshuo-muted)
+    font-size: 12px
+    line-height: 1
+
+    &[hidden]
+      display: none
+
+  .shuoshuo-jump-divider
+    width: 1px
+    height: 10px
+    background: var(--shuoshuo-primary)
+    opacity: .2
+
+  .shuoshuo-jump-label
+    display: inline-flex
+    align-items: center
+    gap: 8px
+
+  .shuoshuo-jump-btn
+    width: 24px
+    height: 24px
+    border-radius: 6px
+    color: var(--shuoshuo-muted)
+
+    &:hover
+      color: var(--shuoshuo-primary)
 
   .shuoshuo-page-input
-    height: 2.6em
-    padding: 0 10px
-    border: 1px solid rgba(0, 0, 0, .08)
-    border-radius: 8px
-    background: var(--card-bg, #fff)
-    color: #666
+    box-sizing: border-box
+    width: 32px
+    height: 24px
+    padding: 0 2px
+    border: 0
+    border-bottom: 1px solid rgba(113, 135, 168, .24)
+    border-radius: 0
+    background: transparent
+    color: var(--shuoshuo-primary)
     text-align: center
-    font-size: .9em
-    transition: all .2s ease-in-out
+    font-size: 12px
+    font-variant-numeric: tabular-nums
+    transition: border-color .2s
+    -moz-appearance: textfield
 
     &:focus
-      border-color: #576b95
+      border-color: var(--shuoshuo-primary)
       outline: none
 
     &::-webkit-outer-spin-button,
@@ -549,7 +719,18 @@
       margin: 0
       -webkit-appearance: none
 
-    -moz-appearance: textfield
+  +maxWidth768()
+    .shuoshuo-page-track,
+    .shuoshuo-page-numbers
+      gap: 2px
+
+    button
+      width: 30px
+      height: 32px
+
+    .shuoshuo-jump-btn
+      width: 24px
+      height: 24px
 
 /* 全屏大图预览 */
 .moments-preview
@@ -699,16 +880,16 @@ body.moments-preview-open
         color: var(--shuoshuo-primary)
 
   .shuoshuo-navigation
-    button
-      border-color: rgba(255, 255, 255, .08)
-      background: rgba(26, 29, 35, .88)
-      color: #aaa
+    .shuoshuo-page-track
+      border-color: rgba(142, 164, 196, .12)
+      background: rgba(26, 29, 35, .72)
+      box-shadow: none
 
-      &:disabled
-        background: rgba(255, 255, 255, .02)
-        color: #555
+  .moments-filters
+    select
+      border-color: rgba(142, 164, 196, .12)
+      background: rgba(26, 29, 35, .72)
 
-    .shuoshuo-page-input
-      border-color: rgba(255, 255, 255, .08)
-      background: rgba(26, 29, 35, .88)
-      color: #aaa
+      &.is-active,
+      &:hover
+        background: var(--shuoshuo-primary-soft)

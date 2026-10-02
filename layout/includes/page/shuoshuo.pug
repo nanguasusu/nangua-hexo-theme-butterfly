@@ -11,6 +11,20 @@
     .moments-signature
       span.signature-text= theme.aside && theme.aside.card_author && theme.aside.card_author.description || config.description || '自在摇曳，生生不息。'
 
+  #shuoshuo-filters.moments-filters(hidden aria-label='筛选说说')
+    label.moments-filter-field
+      select.moments-month-select(aria-label='按月份筛选')
+        option(value='') 全部时间
+      svg(viewBox='0 0 24 24' aria-hidden='true')
+        path(d='m8 10 4 4 4-4')
+    label.moments-filter-field
+      select.moments-tag-select(aria-label='按标签筛选')
+        option(value='') 全部标签
+      svg(viewBox='0 0 24 24' aria-hidden='true')
+        path(d='m8 10 4 4 4-4')
+    button.moments-filter-reset(type='button' hidden) 清除筛选
+    span.moments-filter-count(role='status' aria-live='polite')
+
   #article-container
     //- Empty arrays are valid data sources too; the client renderer owns the empty state.
     if page.shuoshuo_url || site.data.shuoshuo
@@ -197,7 +211,58 @@
           const itemsPerPage = 8
           let totalPages = 0
           let data = []
+          let allData = []
+          let selectedMonth = ''
+          let selectedTag = ''
+          const filterRoot = document.getElementById('shuoshuo-filters')
+          const monthSelect = filterRoot.querySelector('.moments-month-select')
+          const tagSelect = filterRoot.querySelector('.moments-tag-select')
+          const resetFiltersButton = filterRoot.querySelector('.moments-filter-reset')
           const maxPhotos = 9
+
+          const setupFilters = () => {
+            const months = [...new Set(allData.map(item => item.month))].sort().reverse()
+            const tags = [...new Set(allData.flatMap(item => item.tags))].sort((left, right) => left.localeCompare(right, 'zh-CN'))
+            monthSelect.innerHTML = '<option value="">全部时间</option>' + months.map(month => {
+              const [year, number] = month.split('-')
+              return `<option value="${month}">${year} 年 ${Number(number)} 月</option>`
+            }).join('')
+            tagSelect.innerHTML = '<option value="">全部标签</option>' + tags.map(tag => `<option value="${escapeHtml(tag)}">#${escapeHtml(tag)}</option>`).join('')
+            tagSelect.disabled = tags.length === 0
+            filterRoot.hidden = allData.length === 0
+          }
+
+          const applyFilters = () => {
+            data = allData.filter(item => (!selectedMonth || item.month === selectedMonth) && (!selectedTag || item.tags.includes(selectedTag)))
+            currentPage = 1
+            totalPages = Math.ceil(data.length / itemsPerPage)
+            monthSelect.value = selectedMonth
+            tagSelect.value = selectedTag
+            monthSelect.classList.toggle('is-active', Boolean(selectedMonth))
+            tagSelect.classList.toggle('is-active', Boolean(selectedTag))
+            resetFiltersButton.hidden = !selectedMonth && !selectedTag
+            filterRoot.querySelector('.moments-filter-count').textContent = `共 ${data.length} 条`
+            renderPage(currentPage)
+          }
+
+          const clearFilters = () => {
+            selectedMonth = ''
+            selectedTag = ''
+            applyFilters()
+          }
+
+          monthSelect.addEventListener('change', () => {
+            selectedMonth = monthSelect.value
+            applyFilters()
+          })
+          tagSelect.addEventListener('change', () => {
+            selectedTag = tagSelect.value
+            applyFilters()
+          })
+          resetFiltersButton.addEventListener('click', () => {
+            clearFilters()
+            monthSelect.focus({ preventScroll: true })
+          })
 
           const extractShuoshuoPhotos = (item, html) => {
             const photos = []
@@ -418,6 +483,20 @@
           }
 
           document.getElementById('article-container').addEventListener('click', event => {
+            if (event.target.closest('[data-action="clear-shuoshuo-filters"]')) {
+              clearFilters()
+              monthSelect.focus({ preventScroll: true })
+              return
+            }
+            const tagButton = event.target.closest('.moments-tag')
+            if (tagButton) {
+              selectedTag = tagButton.dataset.tag
+              applyFilters()
+              tagSelect.focus({ preventScroll: true })
+              btf.scrollToDest(btf.getEleTop(filterRoot), 300)
+              return
+            }
+
             const foldButton = event.target.closest('.moments-fold')
             if (foldButton) {
               const text = foldButton.previousElementSibling
@@ -451,7 +530,7 @@
           const renderData = (dataSlice) => {
             const content = dataSlice.map((item, index) => {
               const formattedDate = formatToTimeZone(item.date)
-              const tags = item.tags && item.tags.map(tag => `<span class="moments-tag">#${escapeHtml(tag)}</span>`).join('') || ''
+              const tags = item.tags.map(tag => `<button type="button" class="moments-tag" data-tag="${escapeHtml(tag)}" aria-label="筛选标签 ${escapeHtml(tag)}" aria-pressed="${tag === selectedTag}">#${escapeHtml(tag)}</button>`).join('')
               const lineIcon = (paths) => `<svg class="moments-line-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
               const commentButton = item.key && !{commentsJsLoad || false}
                 ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论" aria-expanded="false">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}</button>`
@@ -506,101 +585,97 @@
             document.dispatchEvent(new Event('shuoshuo:rendered'))
           }
 
-          const setupNavEvents = (nav) => {
-            nav.querySelector('.shuoshuo-prev-btn').addEventListener('click', () => {
-              if (currentPage > 1) { currentPage--; renderPage(currentPage) }
+          const changePage = page => {
+            if (page === currentPage) return
+            currentPage = page
+            renderPage(currentPage)
+            const container = document.getElementById('article-container')
+            btf.scrollToDest(btf.getEleTop(container), 300)
+          }
+
+          const setupNavEvents = nav => {
+            nav.querySelector('.shuoshuo-prev-btn').addEventListener('click', () => changePage(currentPage - 1))
+            nav.querySelector('.shuoshuo-next-btn').addEventListener('click', () => changePage(currentPage + 1))
+            nav.querySelector('.shuoshuo-page-numbers').addEventListener('click', event => {
+              const button = event.target.closest('.shuoshuo-page-btn')
+              if (button) changePage(Number(button.dataset.page))
             })
-            nav.querySelector('.shuoshuo-next-btn').addEventListener('click', () => {
-              if (currentPage < totalPages) { currentPage++; renderPage(currentPage) }
-            })
-
-            const input = nav.querySelector('.shuoshuo-page-input')
-
-            input.addEventListener('focus', e => { e.target.placeholder = '' })
-            input.addEventListener('blur', e => {
-              if (!e.target.value.trim()) e.target.placeholder = currentPage
-            })
-
-            input.addEventListener('input', e => {
-              const value = parseInt(e.target.value) || 0
-              let wasInvalid = false
-
-              if (value > totalPages) { e.target.value = totalPages; wasInvalid = true }
-              else if (value < 1 && e.target.value !== '') { e.target.value = 1; wasInvalid = true }
-
-              if (wasInvalid) {
-                e.target.classList.add('invalid')
-                setTimeout(() => e.target.classList.remove('invalid'), 500)
-              }
-            })
-
-            input.addEventListener('keydown', e => {
-              const value = e.target.value + e.key
-
-              if (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete' ||
-                  e.key === 'ArrowLeft' || e.key === 'ArrowRight' ||
-                  e.key === 'Tab' || e.ctrlKey || e.metaKey) {
-                if (e.key === 'Enter') {
-                  const inputValue = e.target.value.trim()
-                  const inputPage = inputValue === '' ? currentPage : parseInt(inputValue)
-                  if (inputPage >= 1 && inputPage <= totalPages && inputPage !== currentPage) {
-                    currentPage = inputPage
-                    renderPage(currentPage)
-                  } else if (inputValue === '') {
-                    renderPage(currentPage)
-                  }
-                }
-                return
-              }
-
-              if (!/^\d$/.test(e.key)) {
-                e.preventDefault()
-                return
-              }
-
-              const newValue = parseInt(value) || 0
-              if (newValue > totalPages || (value.length > 1 && newValue === 0)) {
-                e.preventDefault()
-                e.target.classList.add('invalid')
-                setTimeout(() => e.target.classList.remove('invalid'), 500)
-              }
+            nav.querySelector('.shuoshuo-page-jump').addEventListener('submit', event => {
+              event.preventDefault()
+              changePage(nav.querySelector('.shuoshuo-page-input').valueAsNumber)
             })
           }
 
           const renderNavigation = () => {
             const container = document.getElementById('article-container')
             let nav = container.nextElementSibling
-            const pageInfoTemplate = '#{__('pagination.page_info')}'
-            const pageInfoText = pageInfoTemplate
-              .replace(/\$\{current}/g, currentPage)
-              .replace(/\$\{total}/g, totalPages)
+            if (totalPages <= 1) {
+              if (nav && nav.classList.contains('shuoshuo-navigation')) nav.remove()
+              return
+            }
 
             if (!nav || !nav.classList.contains('shuoshuo-navigation')) {
-              nav = document.createElement('div')
+              nav = document.createElement('nav')
               nav.className = 'shuoshuo-navigation'
+              nav.setAttribute('aria-label', '说说分页')
               nav.innerHTML = `
-                <button class="shuoshuo-prev-btn" aria-label="上一页"><i class="fa-solid fa-chevron-left"></i></button>
-                <span class="shuoshuo-page-info"></span>
-                <input type="number" class="shuoshuo-page-input" min="1" aria-label="输入页码">
-                <button class="shuoshuo-next-btn" aria-label="下一页"><i class="fa-solid fa-chevron-right"></i></button>
+                <div class="shuoshuo-page-track">
+                  <button type="button" class="shuoshuo-prev-btn" aria-label="上一页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg></button>
+                  <div class="shuoshuo-page-numbers"></div>
+                  <button type="button" class="shuoshuo-next-btn" aria-label="下一页"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 7 5 5-5 5"/></svg></button>
+                </div>
+                <form class="shuoshuo-page-jump" aria-label="跳转页码">
+                  <span class="shuoshuo-page-info"></span>
+                  <span class="shuoshuo-jump-divider" aria-hidden="true"></span>
+                  <label class="shuoshuo-jump-label"><span>前往</span><input type="number" class="shuoshuo-page-input" min="1" step="1" required inputmode="numeric" aria-label="输入页码"></label>
+                  <button type="submit" class="shuoshuo-jump-btn" aria-label="跳转到指定页码" title="跳转，也可以按回车"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6v6a3 3 0 0 1-3 3H5m4-4-4 4 4 4"/></svg></button>
+                </form>
               `
               container.insertAdjacentElement('afterend', nav)
               setupNavEvents(nav)
             }
 
-            nav.querySelector('.shuoshuo-page-info').textContent = pageInfoText
+            const pages = []
+            if (totalPages <= 7) {
+              for (let page = 1; page <= totalPages; page++) pages.push(page)
+            } else {
+              pages.push(1)
+              const start = currentPage <= 4 ? 2 : currentPage >= totalPages - 3 ? totalPages - 4 : currentPage - 1
+              const end = currentPage <= 4 ? 5 : currentPage >= totalPages - 3 ? totalPages - 1 : currentPage + 1
+              if (start > 2) pages.push(null)
+              for (let page = start; page <= end; page++) pages.push(page)
+              if (end < totalPages - 1) pages.push(null)
+              pages.push(totalPages)
+            }
+            const focusedPage = nav.querySelector('.shuoshuo-page-btn:focus')?.dataset.page
+            nav.querySelector('.shuoshuo-page-numbers').innerHTML = pages.map(page => page === null
+              ? '<span class="shuoshuo-page-ellipsis" aria-hidden="true">…</span>'
+              : `<button type="button" class="shuoshuo-page-btn" data-page="${page}" aria-label="第 ${page} 页"${page === currentPage ? ' aria-current="page"' : ''}>${page}</button>`
+            ).join('')
+            if (focusedPage) nav.querySelector(`[data-page="${currentPage}"]`).focus({ preventScroll: true })
             nav.querySelector('.shuoshuo-prev-btn').disabled = currentPage === 1
             nav.querySelector('.shuoshuo-next-btn').disabled = currentPage === totalPages
+            nav.querySelector('.shuoshuo-page-info').textContent = `共 ${totalPages} 页`
+            nav.querySelector('.shuoshuo-page-jump').hidden = totalPages <= 7
             const input = nav.querySelector('.shuoshuo-page-input')
+            input.disabled = totalPages <= 7
             input.max = totalPages
-            input.placeholder = currentPage
+            input.value = currentPage
+            input.title = `请输入 1 至 ${totalPages} 的页码`
           }
 
           const renderPage = (page) => {
             const start = (page - 1) * itemsPerPage
             const end = start + itemsPerPage
             const pageData = data.slice(start, end)
-            renderData(pageData)
+            if (data.length) {
+              renderData(pageData)
+            } else {
+              const container = document.getElementById('article-container')
+              container.innerHTML = allData.length
+                ? '<div class="moments-empty" role="status"><i class="fa-regular fa-comment-dots"></i><p>这个筛选下还没有说说</p><button type="button" class="moments-empty-reset" data-action="clear-shuoshuo-filters">查看全部动态</button></div>'
+                : '<div class="moments-empty"><i class="fa-regular fa-comment-dots"></i><p>还没有发布任何说说~</p></div>'
+            }
             renderNavigation()
           }
 
@@ -618,15 +693,13 @@
                 originData = dataElement ? JSON.parse(dataElement.textContent) : []
               }
 
-              data = filterDataByLimit(sortDataByDate(originData), limitConfig)
-              totalPages = Math.ceil(data.length / itemsPerPage)
-
-              if (data.length === 0) {
-                container.innerHTML = '<div class="moments-empty"><i class="fa-regular fa-comment-dots"></i><p>还没有发布任何说说~</p></div>'
-                return
-              }
-
-              renderPage(currentPage)
+              allData = filterDataByLimit(sortDataByDate(originData), limitConfig).map(item => ({
+                ...item,
+                month: formatToTimeZone(item.date).slice(0, 7),
+                tags: item.tags || []
+              }))
+              setupFilters()
+              applyFilters()
             } catch (error) {
               console.error(error)
               container.innerHTML = '<div class="moments-error"><i class="fa-solid fa-circle-exclamation"></i><p>加载说说失败，请稍后刷新重试</p></div>'
