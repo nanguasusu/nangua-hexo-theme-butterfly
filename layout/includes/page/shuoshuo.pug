@@ -1,8 +1,12 @@
 - page.toc = false
+link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
 .shuoshuo-moments-wrap
   .moments-header
-    .moments-cover(style=`background-image: url('${theme.default_top_img || theme.index_img || url_for(theme.avatar.img)}')`)
+    .moments-cover(style=`--shuoshuo-cover-image: url('${theme.shuoshuo_cover}')`)
+      .moments-cover-art(aria-hidden='true')
+        .moments-cover-scene.moments-cover-day
+        .moments-cover-scene.moments-cover-night
       .moments-cover-mask
       .moments-user-row
         span.moments-username= config.author || '楠瓜'
@@ -10,6 +14,11 @@
           img.no-lightbox(src=url_for(theme.avatar.img) alt=config.author)
     .moments-signature
       span.signature-text= theme.aside && theme.aside.card_author && theme.aside.card_author.description || config.description || '自在摇曳，生生不息。'
+
+  script(type='module').
+    import { startShuoshuoCover } from '#{url_for('/js/shuoshuo-cover.js')}'
+    const stopCover = startShuoshuoCover(document.querySelector('.shuoshuo-moments-wrap .moments-cover'))
+    document.addEventListener('pjax:send', stopCover, { once: true })
 
   #shuoshuo-filters.moments-filters(hidden aria-label='筛选说说')
     .moments-filter-field
