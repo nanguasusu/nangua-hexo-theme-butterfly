@@ -304,6 +304,9 @@
     gap: 12px
     margin-bottom: 16px
 
+    +maxWidth768()
+      margin-bottom: 12px
+
   .moments-item-info
     min-width: 0
     flex: 1
@@ -367,6 +370,10 @@
     word-break: break-word
     font-size: 1rem
     line-height: 1.8
+
+    +maxWidth768()
+      font-size: 15px
+      line-height: 1.65
 
     &.can-fold
       transition: max-height .28s ease
