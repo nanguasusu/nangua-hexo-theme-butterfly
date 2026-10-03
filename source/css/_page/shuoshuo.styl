@@ -3,9 +3,10 @@
   --shuoshuo-primary-soft: #edf2f8
   --shuoshuo-text: #40454f
   --shuoshuo-muted: #9aa0aa
+  --shuoshuo-border: #e3e9f1
 
   .layout
-    max-width: 720px !important
+    max-width: 920px !important
     width: 100% !important
     margin: 20px auto 40px !important
     padding: 0 16px !important
@@ -284,62 +285,69 @@
   .moments-list
     display: flex
     flex-direction: column
-    gap: 12px
+    gap: 20px
     width: 100%
 
   .moments-item
-    display: flex
-    gap: 12px
-    padding: 16px 18px
-    border-radius: 14px
-    background: rgba(255, 255, 255, .82)
-    box-shadow: 0 4px 24px rgba(0, 0, 0, .035)
+    padding: 24px
+    border: 1px solid var(--shuoshuo-border)
+    border-radius: 16px
+    background: rgba(255, 255, 255, .96)
+    box-shadow: 0 2px 12px rgba(34, 48, 68, .035)
 
     +maxWidth768()
-      gap: 10px
-      padding: 14px 14px
+      padding: 18px 16px
+
+  .moments-item-header
+    display: flex
+    align-items: center
+    gap: 12px
+    margin-bottom: 16px
+
+  .moments-item-info
+    min-width: 0
+    flex: 1
+
+  .moments-author-row
+    display: flex
+    flex-wrap: wrap
+    align-items: center
+    gap: 6px 10px
+    margin-bottom: 4px
 
   .moments-item-avatar
-    width: 40px !important
-    height: 40px !important
-    min-width: 40px !important
-    max-width: 40px !important
+    width: 48px !important
+    height: 48px !important
+    min-width: 48px !important
+    max-width: 48px !important
     overflow: hidden
     flex-shrink: 0
-    border-radius: 8px
+    border-radius: 50%
 
     +maxWidth768()
-      width: 36px !important
-      height: 36px !important
-      min-width: 36px !important
-      max-width: 36px !important
+      width: 42px !important
+      height: 42px !important
+      min-width: 42px !important
+      max-width: 42px !important
 
     img
       display: block !important
-      width: 40px !important
-      height: 40px !important
-      max-width: 40px !important
-      max-height: 40px !important
+      width: 100% !important
+      height: 100% !important
+      max-width: 100% !important
+      max-height: 100% !important
       margin: 0 !important
       border-radius: 0 !important
       object-fit: cover !important
 
-      +maxWidth768()
-        width: 36px !important
-        height: 36px !important
-        max-width: 36px !important
-        max-height: 36px !important
-
   .moments-item-main
     min-width: 0
-    max-width: 600px
-    flex: 1
+    width: 100%
 
   .moments-item-author
-    margin-bottom: 6px
-    color: var(--shuoshuo-primary)
-    font-weight: 600
-    font-size: .92rem
+    color: var(--shuoshuo-text)
+    font-weight: 700
+    font-size: 1rem
     line-height: 1.3
 
   .moments-line-icon
@@ -354,11 +362,11 @@
     stroke-linejoin: round
 
   .moments-text
-    margin-bottom: 4px
+    margin-bottom: 14px
     color: var(--shuoshuo-text)
     word-break: break-word
-    font-size: .94rem
-    line-height: 1.7
+    font-size: 1rem
+    line-height: 1.8
 
     &.can-fold
       transition: max-height .28s ease
@@ -407,13 +415,13 @@
     &:hover
       opacity: 1
 
-  /* 朋友圈九宫格 */
+  /* 大图宫格：两张、四张双列，其余多图三列。 */
   .moments-photos
     display: grid
-    gap: 8px
-    width: max-content
+    gap: 10px
+    width: 100%
     max-width: 100%
-    margin: 10px 0 8px
+    margin: 0 0 16px
 
     .moments-photo-item
       position: relative
@@ -446,34 +454,33 @@
 
     &.count-1
       width: max-content
-      max-width: 100%
 
       .moments-photo-item
         width: auto
+        max-width: 480px
         height: auto
         aspect-ratio: auto
 
         img
           width: auto !important
           height: auto !important
-          max-width: 420px
-          max-height: 460px
+          max-width: 100% !important
+          max-height: 520px
           object-fit: contain !important
 
         &:hover img
           transform: none
 
-        &.is-landscape img
-          max-width: 520px
-          max-height: 420px
+        &.is-landscape
+          max-width: 560px
 
-        &.is-portrait img
-          max-width: 320px
-          max-height: 500px
+        &.is-portrait
+          max-width: 360px
 
     &.count-2,
     &.count-4
-      grid-template-columns: repeat(2, 112px)
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+      max-width: 560px
 
     &.count-3,
     &.count-5,
@@ -481,54 +488,38 @@
     &.count-7,
     &.count-8,
     &.count-9
-      grid-template-columns: repeat(3, 112px)
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+      max-width: 660px
 
     +maxWidth768()
-      width: 100%
-      max-width: 100%
+      gap: 8px
 
       &.count-1
-        width: 100%
-
         .moments-photo-item
-          max-width: 100%
+          max-width: 100% !important
 
           img
             max-width: 100% !important
             max-height: 70vh !important
 
-      &.count-2,
-      &.count-4
-        grid-template-columns: repeat(2, minmax(0, 1fr))
-        max-width: 248px
-
-      &.count-3,
-      &.count-5,
-      &.count-6,
-      &.count-7,
-      &.count-8,
-      &.count-9
-        grid-template-columns: repeat(3, minmax(0, 1fr))
-        max-width: 360px
-
   .moments-tags
     display: flex
     flex-wrap: wrap
     gap: 6px
-    margin: 6px 0
+    margin: 0
 
   .moments-tag
-    padding: 2px 7px
-    border: 0
+    padding: 2px 8px
+    border: 1px solid var(--shuoshuo-border)
     border-radius: 12px
-    background: transparent
+    background: var(--shuoshuo-primary-soft)
     color: var(--shuoshuo-primary)
     font-size: .8rem
     cursor: pointer
 
     &:hover,
     &[aria-pressed='true']
-      background: var(--shuoshuo-primary-soft)
+      border-color: var(--shuoshuo-primary)
 
     &:focus-visible
       outline: 2px solid var(--shuoshuo-primary)
@@ -536,17 +527,19 @@
 
   .moments-item-footer
     display: flex
-    justify-content: space-between
+    justify-content: flex-end
     align-items: center
     gap: 12px
-    margin-top: 12px
+    margin-top: 16px
+    padding-top: 10px
+    border-top: 1px solid var(--shuoshuo-border)
 
   .moments-meta-info
     display: flex
     flex-wrap: wrap
     align-items: center
-    gap: 12px
-    color: #9ca3af
+    gap: 4px 12px
+    color: var(--shuoshuo-muted)
     font-size: 12.5px
     line-height: 1.4
 
@@ -558,7 +551,18 @@
     display: inline-flex
     align-items: center
     gap: 4px
-    color: #9ca3af
+    color: var(--shuoshuo-muted)
+
+  .moments-location
+    max-width: 100%
+    margin-bottom: 12px
+    padding: 4px 10px
+    border-radius: 16px
+    background: var(--shuoshuo-primary-soft)
+    color: var(--shuoshuo-primary)
+    font-size: 12.5px
+    line-height: 1.5
+    overflow-wrap: anywhere
 
   .moments-actions
     display: flex
@@ -931,6 +935,7 @@ body.moments-preview-open
     --shuoshuo-primary-soft: rgba(113, 135, 168, .16)
     --shuoshuo-text: #d5d8de
     --shuoshuo-muted: #8b93a0
+    --shuoshuo-border: rgba(142, 164, 196, .16)
 
     #page-header.nav-fixed #nav,
     #page-header.not-top-img #nav
@@ -944,7 +949,7 @@ body.moments-preview-open
 
   #article-container
     .moments-item
-      background: rgba(32, 36, 44, .78)
+      background: rgba(32, 36, 44, .96)
       box-shadow: 0 4px 24px rgba(0, 0, 0, .22)
 
     .moments-loading,

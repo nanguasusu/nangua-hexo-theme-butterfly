@@ -424,7 +424,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
           const renderPhotos = photos => {
             if (!photos.length) return ''
-            const thumbWidth = photos.length === 1 ? 640 : 300
+            const thumbWidth = 640
             const cells = photos.map(src => `
               <button type="button" class="moments-photo-item" data-src="${escapeHtml(src)}">
                 <img class="no-lightbox" src="${escapeHtml(thumbnailUrl(src, thumbWidth))}" alt="" loading="lazy">
@@ -656,7 +656,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               const avatarImg = item.avatar ? escapeHtml(item.avatar) : !{JSON.stringify(url_for(theme.avatar.img))}
               const pinHtml = item.top === true ? '<span class="moments-pin">置顶</span>' : ''
               const locationHtml = item.location
-                ? `<span class="moments-tail">${lineIcon('<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/>')} ${escapeHtml(item.location)}</span>`
+                ? `<div class="moments-location moments-tail">${lineIcon('<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/>')} ${escapeHtml(item.location)}</div>`
                 : ''
               const deviceHtml = item.device
                 ? `<span class="moments-tail moments-device">${lineIcon('<rect x="8" y="3" width="8" height="18" rx="2"/><path d="M11 18h2"/>')} 来自 ${escapeHtml(item.device)}</span>`
@@ -664,21 +664,27 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
               return `
                 <div class="moments-item${item.top === true ? ' is-pinned' : ''}" data-key="${escapeHtml(item.key || '')}">
-                  <div class="moments-item-avatar">
-                    <img class="no-lightbox" src="${avatarImg}" alt="${authorName}">
-                  </div>
                   <div class="moments-item-main">
-                    <div class="moments-item-author">${authorName}</div>
-                    ${contentHtml}
-                    ${photosHtml}
-                    ${tags ? `<div class="moments-tags">${tags}</div>` : ''}
-                    <div class="moments-item-footer">
-                      <div class="moments-meta-info">
-                        <time class="moments-date" title="${formattedDate}">${btf.diffDate(formattedDate, true)}</time>
-                        ${pinHtml}
-                        ${locationHtml}
-                        ${deviceHtml}
+                    <div class="moments-item-header">
+                      <div class="moments-item-avatar">
+                        <img class="no-lightbox" src="${avatarImg}" alt="${authorName}">
                       </div>
+                      <div class="moments-item-info">
+                        <div class="moments-author-row">
+                          <div class="moments-item-author">${authorName}</div>
+                          ${pinHtml}
+                          ${tags ? `<div class="moments-tags">${tags}</div>` : ''}
+                        </div>
+                        <div class="moments-meta-info">
+                          <time class="moments-date" title="${formattedDate}">${btf.diffDate(formattedDate, true)}</time>
+                          ${deviceHtml}
+                        </div>
+                      </div>
+                    </div>
+                    ${contentHtml}
+                    ${locationHtml}
+                    ${photosHtml}
+                    <div class="moments-item-footer">
                       <div class="moments-actions">
                         ${commentButton}
                       </div>
