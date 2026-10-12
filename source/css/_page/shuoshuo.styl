@@ -287,6 +287,7 @@
     flex-direction: column
     gap: 20px
     width: 100%
+    overflow-anchor: none
 
   .moments-item
     padding: 24px
@@ -376,7 +377,14 @@
       line-height: 1.65
 
     &.can-fold
+      overflow: hidden
       transition: max-height .28s ease
+
+      +maxWidth768()
+        transition: none
+
+      @media (prefers-reduced-motion: reduce)
+        transition: none
 
     &.is-collapsed
       overflow: hidden
@@ -410,6 +418,7 @@
     font-size: 13px
     line-height: 1.4
     cursor: pointer
+    touch-action: manipulation
 
     .moments-fold-chevron
       width: 12px

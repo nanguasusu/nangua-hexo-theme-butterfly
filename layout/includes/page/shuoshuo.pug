@@ -571,11 +571,16 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
           }, { passive: true })
 
           const collapseLimit = text => {
+            if (text.dataset.collapseLimit) return Number(text.dataset.collapseLimit)
             const style = getComputedStyle(text)
             const line = parseFloat(style.lineHeight)
             const fontSize = parseFloat(style.fontSize) || 16
-            return (Number.isFinite(line) ? line : fontSize * 1.65) * 6
+            const limit = (Number.isFinite(line) ? line : fontSize * 1.65) * 6
+            text.dataset.collapseLimit = String(limit)
+            return limit
           }
+
+          const foldInstantly = () => window.matchMedia('(max-width: 768px), (prefers-reduced-motion: reduce)').matches
 
           const prepareFolds = () => {
             document.querySelectorAll('.moments-text').forEach(text => {
@@ -583,12 +588,54 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               if (text.scrollHeight <= limit + 2) return
               text.classList.add('is-collapsed')
               text.style.maxHeight = `${limit}px`
-              requestAnimationFrame(() => text.classList.add('can-fold'))
+              if (!foldInstantly()) requestAnimationFrame(() => text.classList.add('can-fold'))
               const button = document.createElement('button')
               button.type = 'button'
               button.className = 'moments-fold'
               button.innerHTML = '<span class="moments-fold-label">展开全文</span><svg class="moments-line-icon moments-fold-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'
               text.insertAdjacentElement('afterend', button)
+            })
+          }
+
+          const setFoldLabel = (button, open) => {
+            button.classList.toggle('is-open', open)
+            const label = button.querySelector('.moments-fold-label')
+            if (label) label.textContent = open ? '收起' : '展开全文'
+          }
+
+          const toggleFold = (text, button) => {
+            const opening = !button.classList.contains('is-open')
+            setFoldLabel(button, opening)
+            if (opening) {
+              const full = text.scrollHeight
+              if (foldInstantly()) {
+                text.classList.remove('is-collapsed')
+                text.style.maxHeight = 'none'
+                return
+              }
+              text.style.maxHeight = `${full}px`
+              const done = event => {
+                if (event.target !== text || event.propertyName !== 'max-height') return
+                text.removeEventListener('transitionend', done)
+                if (!button.classList.contains('is-open')) return
+                text.classList.remove('is-collapsed')
+                text.style.maxHeight = 'none'
+              }
+              text.addEventListener('transitionend', done)
+              return
+            }
+
+            const limit = collapseLimit(text)
+            text.classList.add('is-collapsed')
+            if (foldInstantly()) {
+              text.style.maxHeight = `${limit}px`
+              return
+            }
+            text.style.transition = 'none'
+            text.style.maxHeight = `${text.getBoundingClientRect().height}px`
+            requestAnimationFrame(() => {
+              text.style.transition = ''
+              text.style.maxHeight = `${limit}px`
             })
           }
 
@@ -610,22 +657,10 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
             const foldButton = event.target.closest('.moments-fold')
             if (foldButton) {
+              event.preventDefault()
               const text = foldButton.previousElementSibling
               if (!text || !text.classList.contains('moments-text')) return
-              const collapsed = text.classList.contains('is-collapsed')
-              const label = foldButton.querySelector('.moments-fold-label')
-              if (collapsed) {
-                text.classList.remove('is-collapsed')
-                text.style.maxHeight = `${text.scrollHeight}px`
-                foldButton.classList.add('is-open')
-                if (label) label.textContent = '收起'
-              } else {
-                const limit = collapseLimit(text)
-                text.classList.add('is-collapsed')
-                text.style.maxHeight = `${limit}px`
-                foldButton.classList.remove('is-open')
-                if (label) label.textContent = '展开全文'
-              }
+              toggleFold(text, foldButton)
               return
             }
 
