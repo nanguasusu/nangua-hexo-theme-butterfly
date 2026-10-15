@@ -89,7 +89,10 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               return issueIndexTask
             }
 
-            const renderCommentList = (item, comments) => {
+            const renderCommentList = (item, comments, total) => {
+              const button = item.querySelector('.moments-action-comment')
+              button.querySelector('.moments-comment-count').textContent = total ? ` ${total}` : ''
+              button.setAttribute('aria-label', total ? `评论，${total} 条` : '评论')
               const bubble = item.querySelector('.moments-interactive-box')
               const list = item.querySelector('.moments-comment-list')
               if (!bubble || !list) return
@@ -107,15 +110,16 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
             const loadComments = async key => {
               const index = await loadIssueIndex()
               const issue = index.get(issueTerm(key))
-              if (!issue || !issue.comments) return []
+              if (!issue || !issue.comments) return { comments: [], total: 0 }
               const response = await fetch(`https://api.github.com/repos/${commentRepo}/issues/${issue.number}/comments?per_page=100`, { headers: githubHeaders })
               if (!response.ok) throw new Error(`GitHub comments ${response.status}`)
               const data = await response.json()
-              return data.flatMap(comment => {
+              const comments = data.flatMap(comment => {
                 const text = plainComment(comment.body)
                 if (!text) return []
                 return [{ user: comment.user && comment.user.login || '访客', text }]
               })
+              return { comments, total: issue.comments }
             }
 
             const paintComments = async (key, refresh = false) => {
@@ -124,8 +128,8 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               const item = box && box.closest('.moments-item')
               if (!item) return
               try {
-                const comments = await loadComments(key)
-                if (item.isConnected) renderCommentList(item, comments)
+                const { comments, total } = await loadComments(key)
+                if (item.isConnected) renderCommentList(item, comments, total)
               } catch (error) {
                 console.error(error)
               }
@@ -679,7 +683,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               const tags = item.tags.map(tag => `<button type="button" class="moments-tag" data-tag="${escapeHtml(tag)}" aria-label="筛选标签 ${escapeHtml(tag)}" aria-pressed="${tag === selectedTag}">#${escapeHtml(tag)}</button>`).join('')
               const lineIcon = (paths) => `<svg class="moments-line-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`
               const commentButton = item.key && !{commentsJsLoad || false}
-                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论" aria-expanded="false">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}</button>`
+                ? `<button type="button" class="moments-action-btn moments-action-comment" onclick="addCommentToShuoshuo(event)" aria-label="评论" aria-expanded="false">${lineIcon('<path d="M6 16.5 4 20l4.2-1.6A8 8 0 1 0 6 16.5z"/>')}<span>评论<span class="moments-comment-count"></span></span></button>`
                 : ''
               const commentThread = item.key
                 ? `<div class="moments-thread"><div class="moments-interactive-box"><div class="moments-comment-list" hidden></div></div><div class="moments-comment-box no-comment" data-key="${escapeHtml(item.key)}"></div></div>`

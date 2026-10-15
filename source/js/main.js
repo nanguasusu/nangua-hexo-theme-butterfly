@@ -699,7 +699,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300)
       }
 
-      hideLayout.classList.toggle('show')
+      const expanded = hideLayout.classList.toggle('show')
+      document.getElementById('rightside-config').setAttribute('aria-expanded', String(expanded))
     },
     'go-up': () => { // Back to top
       btf.scrollToDest(0, 500)

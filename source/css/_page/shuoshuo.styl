@@ -944,6 +944,263 @@ body.moments-preview-open
   to
     transform: rotate(360deg)
 
+/* 封面、个人信息和动态共用连续面板。 */
+body:has(#body-wrap.type-shuoshuo) #rightside
+  --btn-bg: #7187a8
+  --btn-hover-color: #576f91
+
+  #rightside-config i
+    animation: none
+
+body:has(#body-wrap.type-shuoshuo) #web_bg
+  background-color: #f5f7fa !important
+  background-image: linear-gradient(rgba(113, 135, 168, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(113, 135, 168, .045) 1px, transparent 1px) !important
+
+[data-theme="dark"] body:has(#body-wrap.type-shuoshuo) #web_bg
+  background-color: #15181e !important
+  background-image: linear-gradient(rgba(142, 164, 196, .04) 1px, transparent 1px), linear-gradient(90deg, rgba(142, 164, 196, .04) 1px, transparent 1px) !important
+
+#body-wrap.type-shuoshuo
+  --shuoshuo-panel: #fff
+
+  #page-header.not-top-img
+    margin-bottom: 0
+
+  .layout
+    max-width: 832px !important
+    margin-top: 0 !important
+
+  .shuoshuo-moments-wrap
+    border: 1px solid var(--shuoshuo-border)
+    border-radius: 18px
+    background: var(--shuoshuo-panel)
+    box-shadow: 0 8px 32px rgba(34, 48, 68, .04)
+
+  .moments-header
+    margin-bottom: 0
+
+    .moments-cover
+      border-radius: 18px 18px 0 0
+
+    .moments-user-row
+      right: 28px
+      bottom: -42px
+      left: auto
+      flex-direction: row
+      gap: 14px
+
+    .moments-avatar-box
+      width: 64px
+      height: 64px
+      border-radius: 16px
+      box-shadow: none
+
+    .moments-username
+      margin-bottom: 8px
+      color: var(--shuoshuo-text)
+      text-shadow: none
+
+    .moments-signature
+      padding: 36px 106px 12px 28px
+      text-align: right
+      font-size: 13px
+
+  .moments-filters
+    gap: 10px
+    margin: 0 28px
+    padding: 12px 0
+    border-bottom: 1px solid var(--shuoshuo-border)
+
+    .moments-time-trigger,
+    .moments-tag-trigger
+      background: var(--shuoshuo-primary-soft)
+      font-size: 13px
+
+  #article-container
+    .moments-list
+      gap: 0
+
+    .moments-item
+      margin: 0 28px
+      padding: 28px 0 12px
+      border: 0
+      border-radius: 0
+      background: transparent
+      box-shadow: none
+
+      + .moments-item
+        border-top: 1px solid var(--shuoshuo-border)
+
+    .moments-item-header
+      gap: 10px
+      margin-bottom: 14px
+
+    .moments-item-avatar
+      width: 40px !important
+      height: 40px !important
+      min-width: 40px !important
+      max-width: 40px !important
+
+    .moments-item-author
+      font-size: 15px
+
+    .moments-text
+      margin-bottom: 10px
+      font-size: 16px
+      line-height: 1.75
+
+    .moments-photos
+      gap: 8px
+      margin-bottom: 10px
+
+      .moments-photo-item
+        border-radius: 12px
+
+    .moments-item-footer
+      margin-top: 0
+      padding-top: 0
+      border-top: 0
+
+    .moments-action-comment
+      gap: 6px
+      width: auto
+      min-height: 36px
+      padding: 0 10px
+      color: var(--shuoshuo-primary)
+      font-size: 12px
+
+      .moments-line-icon
+        width: 15px
+        height: 15px
+
+      &[aria-expanded='true']
+        background: var(--shuoshuo-primary-soft)
+
+      &:focus-visible
+        outline: 2px solid var(--shuoshuo-primary)
+        outline-offset: 2px
+
+  .shuoshuo-navigation
+    margin-top: 0
+    padding: 20px 28px 28px
+
+[data-theme="dark"] #body-wrap.type-shuoshuo
+  --shuoshuo-panel: #20242c
+
+
+/* 手机端：内容铺满屏幕，保留轻量的左右留白。 */
+@media (max-width: 768px)
+  body:has(#body-wrap.type-shuoshuo) #rightside
+    bottom: calc(16px + env(safe-area-inset-bottom))
+
+    #rightside-config-show
+      display: flex
+      flex-direction: column
+
+      > :not(#rightside-config)
+        display: none
+
+    #rightside-config
+      order: 1
+
+    #rightside-config-hide:not(.show):not(.status)
+      display: none
+
+    &:has(#rightside-config-hide.show) #rightside-config-show > :not(#rightside-config)
+      display: block
+
+    > div > button,
+    > div > a
+      width: 40px
+      height: 40px
+      border-radius: 12px
+      line-height: 40px
+      box-shadow: 0 2px 10px rgba(34, 48, 68, .12)
+
+  #body-wrap.type-shuoshuo
+    .layout
+      margin-bottom: 24px !important
+      padding: 0 !important
+
+    .shuoshuo-moments-wrap
+      border: 0
+      border-radius: 0
+      box-shadow: none
+
+    .moments-header
+      .moments-cover
+        height: 168px
+        border-radius: 0
+
+      .moments-user-row
+        right: 16px
+        bottom: -36px
+        gap: 12px
+
+      .moments-avatar-box
+        width: 56px
+        height: 56px
+        border-radius: 14px
+
+      .moments-username
+        font-size: 16px
+
+      .moments-signature
+        padding: 30px 84px 10px 16px
+        font-size: 12px
+
+    .moments-filters
+      gap: 8px
+      margin: 0 16px
+      padding: 10px 0 12px
+
+      .moments-time-trigger,
+      .moments-tag-trigger
+        min-height: 40px
+        padding: 8px 10px
+        font-size: 12px
+
+    #article-container
+      .moments-item
+        margin: 0 16px
+        padding: 20px 0 10px
+
+      .moments-item-header
+        margin-bottom: 12px
+
+      .moments-item-avatar
+        width: 36px !important
+        height: 36px !important
+        min-width: 36px !important
+        max-width: 36px !important
+
+      .moments-item-author
+        font-size: 14px
+
+      .moments-text
+        font-size: 15px
+        line-height: 1.65
+
+      .moments-action-comment
+        min-height: 40px
+
+      .moments-photos
+        gap: 6px
+
+        .moments-photo-item
+          border-radius: 10px
+
+    .shuoshuo-navigation
+      padding: 20px 16px 24px
+
+      button
+        width: 40px
+        height: 40px
+
+      .shuoshuo-jump-btn
+        width: 32px
+        height: 32px
+
 /* 暗色模式适配 */
 [data-theme="dark"]
   #body-wrap.type-shuoshuo
