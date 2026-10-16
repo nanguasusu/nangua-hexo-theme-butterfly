@@ -1,0 +1,10 @@
+-
+  let heroImage = false
+  if (page.type === 'shuoshuo') {
+    heroImage = theme.shuoshuo_cover
+  } else if (globalPageType === 'home' && !theme.disable_top_img && page.top_img !== false && theme.index_img !== false) {
+    heroImage = theme.index_img || theme.default_top_img
+  }
+
+if heroImage && getBgPath(heroImage).startsWith('background-image:')
+  link(rel='preload' as='image' href=url_for(heroImage) fetchpriority='high')

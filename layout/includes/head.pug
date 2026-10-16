@@ -47,6 +47,9 @@ link(rel="canonical" href=urlNoIndex(null,config.pretty_urls.trailing_index,conf
 if (theme.pwa && theme.pwa.enable)
   !=partial('includes/head/pwa', {}, {cache: true})
 
+//- Preload only the current page's hero image
+include ./head/image-preload.pug
+
 //- main css
 link(rel='stylesheet', href=url_for(theme.asset.main_css))
 link(rel='stylesheet', href=url_for(theme.asset.fontawesome))

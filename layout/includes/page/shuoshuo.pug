@@ -50,6 +50,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
             const commentRepo = !{JSON.stringify(theme.utterances && theme.utterances.repo || '')}
             const githubHeaders = { Accept: 'application/vnd.github+json' }
             let issueIndexTask = null
+            const commentTasks = new Map()
 
             const escapeHtml = str => String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
             const cssEscape = value => window.CSS && CSS.escape ? CSS.escape(value) : String(value).replace(/"/g, '\\"')
@@ -72,7 +73,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
             const loadIssueIndex = () => {
               if (issueIndexTask) return issueIndexTask
-              issueIndexTask = (async () => {
+              const task = (async () => {
                 const index = new Map()
                 if (!commentRepo) return index
                 const phrase = `${location.pathname.replace(/\/$/, '')}?key=`
@@ -83,10 +84,11 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
                 for (const issue of data.items || []) index.set(issue.title, issue)
                 return index
               })().catch(error => {
-                issueIndexTask = null
+                if (issueIndexTask === task) issueIndexTask = null
                 throw error
               })
-              return issueIndexTask
+              issueIndexTask = task
+              return task
             }
 
             const renderCommentList = (item, comments, total) => {
@@ -107,7 +109,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               bubble.classList.add('has-content')
             }
 
-            const loadComments = async key => {
+            const fetchComments = async key => {
               const index = await loadIssueIndex()
               const issue = index.get(issueTerm(key))
               if (!issue || !issue.comments) return { comments: [], total: 0 }
@@ -122,14 +124,28 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
               return { comments, total: issue.comments }
             }
 
+            const loadComments = key => {
+              if (commentTasks.has(key)) return commentTasks.get(key)
+              const task = fetchComments(key).catch(error => {
+                if (commentTasks.get(key) === task) commentTasks.delete(key)
+                throw error
+              })
+              commentTasks.set(key, task)
+              return task
+            }
+
             const paintComments = async (key, refresh = false) => {
-              if (refresh) issueIndexTask = null
+              if (refresh) {
+                issueIndexTask = null
+                commentTasks.delete(key)
+              }
               const box = document.querySelector(`.moments-comment-box[data-key="${cssEscape(key)}"]`)
               const item = box && box.closest('.moments-item')
               if (!item) return
               try {
-                const { comments, total } = await loadComments(key)
-                if (item.isConnected) renderCommentList(item, comments, total)
+                const task = loadComments(key)
+                const { comments, total } = await task
+                if (item.isConnected && commentTasks.get(key) === task) renderCommentList(item, comments, total)
               } catch (error) {
                 console.error(error)
               }
@@ -137,12 +153,17 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
 
             window.refreshShuoshuoComment = key => paintComments(key, true)
 
-            document.addEventListener('shuoshuo:rendered', () => {
-              issueIndexTask = null
+            const onRendered = () => {
               document.querySelectorAll('.moments-comment-box[data-key]').forEach(box => {
                 paintComments(box.getAttribute('data-key'))
               })
-            })
+            }
+            document.addEventListener('shuoshuo:rendered', onRendered)
+            document.addEventListener('pjax:send', () => {
+              document.removeEventListener('shuoshuo:rendered', onRendered)
+              commentTasks.clear()
+              issueIndexTask = null
+            }, { once: true })
 
             window.addCommentToShuoshuo = e => {
               const btn = e.target.closest('.moments-action-comment')
@@ -415,25 +436,40 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
             return { html: root.innerHTML.trim(), photos }
           }
 
-          const thumbnailUrl = (src, width) => {
+          const photoSources = (source, width) => {
             try {
-              const url = new URL(src, location.origin)
-              if (url.protocol !== 'http:' && url.protocol !== 'https:') return src
-              if (!url.searchParams.has('width')) url.searchParams.set('width', String(width))
-              return url.toString()
+              const url = new URL(source)
+              if (url.origin !== 'https://img.nnann.cc' || url.search || url.hash || url.username || url.password) return { src: source, srcset: '' }
+              const key = url.pathname.split('/').map(segment => encodeURIComponent(decodeURIComponent(segment))).join('/')
+              const base = 'https://g.nnann.cc/thumb'
+              const src = `${base}/${width}${key}`
+              return { src, srcset: `${src} 1x, ${base}/${width * 2}${key} 2x` }
             } catch {
-              return src
+              return { src: source, srcset: '' }
             }
           }
 
           const renderPhotos = photos => {
             if (!photos.length) return ''
-            const thumbWidth = 640
-            const cells = photos.map(src => `
-              <button type="button" class="moments-photo-item" data-src="${escapeHtml(src)}">
-                <img class="no-lightbox" src="${escapeHtml(thumbnailUrl(src, thumbWidth))}" alt="" loading="lazy">
-              </button>`).join('')
+            const cells = photos.map(src => {
+              const image = photoSources(src, photos.length === 1 ? 800 : 400)
+              const thumbnail = image.srcset ? ` srcset="${escapeHtml(image.srcset)}" data-original="${escapeHtml(src)}"` : ''
+              return `<button type="button" class="moments-photo-item" data-src="${escapeHtml(src)}">
+                <img class="no-lightbox" src="${escapeHtml(image.src)}"${thumbnail} alt="" loading="lazy">
+              </button>`
+            }).join('')
             return `<div class="moments-photos count-${photos.length}">${cells}</div>`
+          }
+
+          const bindPhotoFallbacks = container => {
+            container.querySelectorAll('img[data-original]').forEach(image => {
+              image.addEventListener('error', () => {
+                const original = image.dataset.original
+                image.removeAttribute('srcset')
+                image.removeAttribute('data-original')
+                image.src = original
+              }, { once: true })
+            })
           }
 
           const classifySinglePhoto = item => {
@@ -736,6 +772,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
             const container = document.getElementById('article-container')
             container.innerHTML = `<div class="moments-list">${content}</div>`
 
+            bindPhotoFallbacks(container)
             prepareFolds()
             container.querySelectorAll('.moments-photos.count-1 .moments-photo-item').forEach(classifySinglePhoto)
             document.dispatchEvent(new Event('shuoshuo:rendered'))
