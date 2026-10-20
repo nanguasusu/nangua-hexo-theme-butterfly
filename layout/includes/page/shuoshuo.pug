@@ -229,7 +229,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
           }
 
           const dateFormatter = new Intl.DateTimeFormat('en-GB', {
-            timeZone: !{JSON.stringify(config.timezone || '')} || Intl.DateTimeFormat().resolvedOptions().timeZone,
+            timeZone: 'Asia/Shanghai',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -240,9 +240,30 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
           })
 
           const formatToTimeZone = (date) => {
-            const fullDate = date.length === 10 ? `${date} 00:00:00` : date
+            const localDate = date.length === 10 ? `${date}T00:00:00` : date.replace(' ', 'T')
+            const fullDate = /(?:Z|[+-][0-9]{2}:?[0-9]{2})$/i.test(localDate) ? localDate : `${localDate}+08:00`
             const [day, month, year, hour, minute, second] = dateFormatter.format(new Date(fullDate)).match(/\d+/g)
             return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+          }
+
+          const formatMomentDate = (formattedDate) => {
+            const now = new Date()
+            const today = formatToTimeZone(now.toISOString())
+            const datePart = formattedDate.slice(0, 10)
+            const clock = formattedDate.slice(11, 16)
+            const days = (Date.parse(`${today.slice(0, 10)}T00:00:00+08:00`) - Date.parse(`${datePart}T00:00:00+08:00`)) / 86400000
+            const elapsed = now - new Date(`${formattedDate.replace(' ', 'T')}+08:00`)
+            if (days === 0 && elapsed >= 0) {
+              if (elapsed < 60000) return '刚刚'
+              if (elapsed < 3600000) return `${Math.floor(elapsed / 60000)} 分钟前`
+              return `${Math.floor(elapsed / 3600000)} 小时前`
+            }
+            if (days === 1) return `昨天 ${clock}`
+            if (days === 2) return `前天 ${clock}`
+            const [year, month, day] = datePart.split('-').map(Number)
+            return year === Number(today.slice(0, 4))
+              ? `${month} 月 ${day} 日 ${clock}`
+              : `${year} 年 ${month} 月 ${day} 日`
           }
 
           let currentPage = 1
@@ -751,7 +772,7 @@ link(rel='stylesheet' href=url_for('/css/shuoshuo-cover.css'))
                           ${tags ? `<div class="moments-tags">${tags}</div>` : ''}
                         </div>
                         <div class="moments-meta-info">
-                          <time class="moments-date" title="${formattedDate}">${btf.diffDate(formattedDate, true)}</time>
+                          <time class="moments-date" datetime="${formattedDate.replace(' ', 'T')}+08:00" title="${formattedDate}（北京时间）">${formatMomentDate(formattedDate)}</time>
                           ${deviceHtml}
                         </div>
                       </div>
